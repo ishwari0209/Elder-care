@@ -1,0 +1,16 @@
+
+{
+  "expo": {
+    "name": "saathi-mobile",
+    "slug": "saathi-mobile",
+    "version": "1.0.0",
+    "plugins": [
+      "expo-secure-store",
+      "@react-native-community/datetimepicker",
+      "expo-notifications"
+    ],
+    "android": {
+      "package": "com.anonymous.saathimobile"
+    }
+  }
+}

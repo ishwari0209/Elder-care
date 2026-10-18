@@ -1,0 +1,21 @@
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+
+# Dependencies
+node_modules/
+
+# Expo
+.expo/
+dist/
+web-build/
+
+# Build output
+android/.gradle/
+android/app/build/
+android/build/
+ios/Pods/
+
+# Logs
+npm-debug.log*
