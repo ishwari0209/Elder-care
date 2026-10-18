@@ -19,3 +19,4 @@ ios/Pods/
 
 # Logs
 npm-debug.log*
+mobile/android/app/debug.keystore
