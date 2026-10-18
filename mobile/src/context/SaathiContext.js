@@ -1,4 +1,3 @@
-import { syncMedicineReminders } from '../medicineReminders';
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { Alert } from 'react-native';
 import * as API from '../api';
@@ -28,9 +27,7 @@ export function SaathiProvider({ children }) {
       if (p && p.name) setProfileState({ ...emptyProfile, ...p, age: String(p.age || '') });
       else setProfileState(emptyProfile);
       setRoutinesState(Array.isArray(r) ? r : []);
-      const savedMedicines = Array.isArray(m) ? m : [];
-setMedicinesState(savedMedicines);
-await syncMedicineReminders(savedMedicines);
+      setMedicinesState(Array.isArray(m) ? m : []);
       setContactsState(c && c.name ? { ...emptyContacts, ...c } : emptyContacts);
       const date = new Date().toISOString().slice(0, 10);
       const completions = await API.getCompletions(date);
@@ -126,12 +123,14 @@ const setMedicines = useCallback((next) => {
     const value = typeof next === 'function' ? next(prev) : next;
 
     API.saveMedicines(value, prev)
-      .then(async (savedMedicines) => {
-  if (Array.isArray(savedMedicines)) {
-    setMedicinesState(savedMedicines);
-    await syncMedicineReminders(savedMedicines);
-  }
-});
+      .then((savedMedicines) => {
+        if (Array.isArray(savedMedicines)) {
+          setMedicinesState(savedMedicines);
+        }
+      })
+      .catch((error) => {
+        Alert.alert('Save failed', error.message);
+      });
 
     return value;
   });
