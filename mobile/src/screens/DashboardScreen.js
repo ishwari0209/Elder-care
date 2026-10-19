@@ -1,6 +1,5 @@
 
 import React, { useState } from 'react';
-
 import {
   View,
   Text,
@@ -18,9 +17,9 @@ import PrimaryButton from '../components/PrimaryButton';
 import { C, card } from '../theme';
 import { logout, saveCompletion } from '../api';
 
-const Empty = ({ t }) => (
+const Empty = ({ text }) => (
   <Text style={{ color: C.grey, fontSize: 16, paddingVertical: 8 }}>
-    {t}
+    {text}
   </Text>
 );
 
@@ -35,18 +34,22 @@ function getLocalDate() {
 }
 
 export default function DashboardScreen({ navigation }) {
- const {
-  currentUser,
-  setCurrentUser,
-  profile,
-  routines,
-  medicines,
-  contacts,
-  done,
-  setDone,
-  taken,
-  setTaken,
-} = useSaathi();
+  const {
+    currentUser,
+    setCurrentUser,
+    profile,
+    routines,
+    medicines,
+    contacts,
+    done,
+    setDone,
+    taken,
+    setTaken,
+    language,
+    setLanguage,
+    t,
+  } = useSaathi();
+
   const [savingItems, setSavingItems] = useState({});
 
   const today = new Date();
@@ -74,17 +77,19 @@ export default function DashboardScreen({ navigation }) {
   const doneCount = sorted.filter(
     (routine) => done[routine._id]
   ).length;
-const routinePercent = sorted.length
-  ? Math.round((doneCount / sorted.length) * 100)
-  : 0;
 
-const takenCount = doses.filter(
-  (dose) => Boolean(taken[dose.key])
-).length;
+  const routinePercent = sorted.length
+    ? Math.round((doneCount / sorted.length) * 100)
+    : 0;
 
-const medicinePercent = doses.length
-  ? Math.round((takenCount / doses.length) * 100)
-  : 0;
+  const takenCount = doses.filter(
+    (dose) => Boolean(taken[dose.key])
+  ).length;
+
+  const medicinePercent = doses.length
+    ? Math.round((takenCount / doses.length) * 100)
+    : 0;
+
   const complete = async (
     itemType,
     itemId,
@@ -106,8 +111,8 @@ const medicinePercent = doses.length
   const toggleRoutine = async (routine) => {
     if (!routine._id) {
       Alert.alert(
-        'Unable to save',
-        'This routine has no database ID. Please reload your routines.'
+        t('Unable to save'),
+        t('This routine has no database ID. Please reload your routines.')
       );
       return;
     }
@@ -139,8 +144,8 @@ const medicinePercent = doses.length
       }));
     } catch (error) {
       Alert.alert(
-        'Could not save routine',
-        error.message || 'Please try again.'
+        t('Could not save routine'),
+        t(error.message || 'Please try again.')
       );
     } finally {
       setSavingItems((previous) => ({
@@ -153,8 +158,8 @@ const medicinePercent = doses.length
   const confirm = async (dose) => {
     if (!dose.itemId) {
       Alert.alert(
-        'Unable to confirm',
-        'This medicine has no database ID. Please reload your medicines.'
+        t('Unable to confirm'),
+        t('This medicine has no database ID. Please reload your medicines.')
       );
       return;
     }
@@ -189,13 +194,13 @@ const medicinePercent = doses.length
       }));
 
       Alert.alert(
-        'Saathi',
-        'Your medicine confirmation was saved.'
+        t('Saathi'),
+        t('Your medicine confirmation was saved.')
       );
     } catch (error) {
       Alert.alert(
-        'Could not save confirmation',
-        error.message || 'Please try again.'
+        t('Could not save confirmation'),
+        t(error.message || 'Please try again.')
       );
     } finally {
       setSavingItems((previous) => ({
@@ -216,61 +221,74 @@ const medicinePercent = doses.length
       });
     } catch (error) {
       Alert.alert(
-        'Logout error',
-        error.message || 'Unable to clear your session.'
+        t('Logout error'),
+        t(error.message || 'Unable to clear your session.')
       );
     }
   };
 
-const sos = () => {
-  const phone = contacts?.phone?.trim();
-  const backupPhone = contacts?.phone2?.trim();
+  const sos = () => {
+    const phone = contacts?.phone?.trim();
+    const backupPhone = contacts?.phone2?.trim();
 
-  Alert.alert(
-    'Emergency Assistance',
-    'Choose how you want to contact someone.',
-    [
-      {
-        text: 'Call emergency number 112',
-        onPress: async () => {
-          try {
-            await Linking.openURL('tel:112');
-          } catch {
-            Alert.alert('Unable to call', 'Please dial 112 manually.');
-          }
+    Alert.alert(
+      t('Emergency Assistance'),
+      t('Choose how you want to contact someone.'),
+      [
+        {
+          text: t('Call emergency number 112'),
+          onPress: async () => {
+            try {
+              await Linking.openURL('tel:112');
+            } catch {
+              Alert.alert(
+                t('Unable to call'),
+                t('Please dial 112 manually.')
+              );
+            }
+          },
         },
-      },
-      ...(phone
-        ? [{
-            text: `Call ${contacts.name || 'primary contact'}`,
-            onPress: async () => {
-              try {
-                await Linking.openURL(`tel:${phone}`);
-              } catch {
-                Alert.alert('Unable to call', 'Please dial the contact manually.');
-              }
-            },
-          }]
-        : []),
-      ...(backupPhone
-        ? [{
-            text: 'Call backup contact',
-            onPress: async () => {
-              try {
-                await Linking.openURL(`tel:${backupPhone}`);
-              } catch {
-                Alert.alert('Unable to call', 'Please dial the contact manually.');
-              }
-            },
-          }]
-        : []),
-      {
-        text: 'Cancel',
-        style: 'cancel',
-      },
-    ]
-  );
-};
+        ...(phone
+          ? [
+              {
+                text: `${t('Call')} ${contacts.name || t('primary contact')}`,
+                onPress: async () => {
+                  try {
+                    await Linking.openURL(`tel:${phone}`);
+                  } catch {
+                    Alert.alert(
+                      t('Unable to call'),
+                      t('Please dial the contact manually.')
+                    );
+                  }
+                },
+              },
+            ]
+          : []),
+        ...(backupPhone
+          ? [
+              {
+                text: t('Call backup contact'),
+                onPress: async () => {
+                  try {
+                    await Linking.openURL(`tel:${backupPhone}`);
+                  } catch {
+                    Alert.alert(
+                      t('Unable to call'),
+                      t('Please dial the contact manually.')
+                    );
+                  }
+                },
+              },
+            ]
+          : []),
+        {
+          text: t('Cancel'),
+          style: 'cancel',
+        },
+      ]
+    );
+  };
 
   const shortcuts = [
     ['Profile', 'person', 'Profile'],
@@ -281,7 +299,45 @@ const sos = () => {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }}>
-      <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 40 }}>
+      <ScrollView
+        contentContainerStyle={{ padding: 20, paddingBottom: 40 }}
+      >
+        {/* Language selector */}
+        <View
+          style={{
+            flexDirection: 'row',
+            justifyContent: 'flex-end',
+            marginBottom: 10,
+            alignItems: 'center',
+          }}
+        >
+          <Text style={{ color: C.grey, marginRight: 8 }}>
+            {t('Language')}:
+          </Text>
+
+          {['en', 'mr', 'hi'].map((code) => (
+            <TouchableOpacity
+              key={code}
+              onPress={() => setLanguage(code)}
+              style={{
+                padding: 8,
+                borderRadius: 8,
+                backgroundColor:
+                  language === code ? C.mint : 'transparent',
+              }}
+            >
+              <Text style={{ color: C.navy, fontWeight: '800' }}>
+                {code === 'en'
+                  ? 'EN'
+                  : code === 'mr'
+                    ? 'मराठी'
+                    : 'हिंदी'}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Greeting */}
         <View
           style={{
             flexDirection: 'row',
@@ -297,7 +353,8 @@ const sos = () => {
                 color: C.navy,
               }}
             >
-              Hello, {currentUser?.name || profile?.name || 'friend'}
+              {t('Hello,')}{' '}
+              {currentUser?.name || profile?.name || t('friend')}
             </Text>
 
             <Text
@@ -316,11 +373,12 @@ const sos = () => {
             style={{ padding: 10 }}
           >
             <Text style={{ color: C.teal, fontWeight: '800' }}>
-              Log out
+              {t('Log out')}
             </Text>
           </TouchableOpacity>
         </View>
 
+        {/* Profile reminder */}
         {(!profile?.name?.trim() || !profile?.phone?.trim()) && (
           <View style={[card, { borderWidth: 1, borderColor: C.teal }]}>
             <Text
@@ -330,7 +388,7 @@ const sos = () => {
                 color: C.navy,
               }}
             >
-              Create your profile first
+              {t('Create your profile first')}
             </Text>
 
             <Text
@@ -342,22 +400,24 @@ const sos = () => {
                 marginBottom: 8,
               }}
             >
-              Welcome to Saathi! Add your profile details to personalize
-              your routines and care dashboard.
+              {t(
+                'Welcome to Saathi! Add your profile details to personalize your routines and care dashboard.'
+              )}
             </Text>
 
             <PrimaryButton
-              title="Create Profile"
+              title={t('Create Profile')}
               color={C.teal}
               onPress={() => navigation.navigate('Profile')}
             />
           </View>
         )}
 
+        {/* Emergency assistance */}
         <TouchableOpacity
           onPress={sos}
           accessibilityRole="button"
-          accessibilityLabel="SOS emergency"
+          accessibilityLabel={t('SOS emergency')}
           style={{
             backgroundColor: C.red,
             borderRadius: 20,
@@ -381,6 +441,7 @@ const sos = () => {
           </Text>
         </TouchableOpacity>
 
+        {/* Shortcuts */}
         <View
           style={{
             flexDirection: 'row',
@@ -413,12 +474,21 @@ const sos = () => {
                   marginTop: 4,
                 }}
               >
-                {label}
+                {t(label)}
               </Text>
             </TouchableOpacity>
           ))}
         </View>
 
+        {/* Caregiver dashboard */}
+        <PrimaryButton
+          title={t('Family / Caregiver Dashboard')}
+          color={C.navy}
+          onPress={() => navigation.navigate('Caregiver')}
+          style={{ marginBottom: 14 }}
+        />
+
+        {/* Today's progress */}
         <View style={card}>
           <Text
             style={{
@@ -427,44 +497,67 @@ const sos = () => {
               color: C.navy,
             }}
           >
-            Today's routine
+            {t("Today's progress")}
           </Text>
-            
-<View style={card}>
-  <Text style={{ fontSize: 20, fontWeight: '800', color: C.navy }}>
-    Today's progress
-  </Text>
 
-  <Text style={{ color: C.grey, marginTop: 10 }}>
-    Routines: {doneCount}/{sorted.length} completed ({routinePercent}%)
-  </Text>
+          <Text style={{ color: C.grey, marginTop: 10 }}>
+            {t('Routines')}: {doneCount}/{sorted.length}{' '}
+            {t('completed')} ({routinePercent}%)
+          </Text>
 
-  <View style={{ height: 8, backgroundColor: C.line, borderRadius: 8, marginTop: 6 }}>
-    <View
-      style={{
-        width: `${routinePercent}%`,
-        height: 8,
-        backgroundColor: C.teal,
-        borderRadius: 8,
-      }}
-    />
-  </View>
+          <View
+            style={{
+              height: 8,
+              backgroundColor: C.line,
+              borderRadius: 8,
+              marginTop: 6,
+            }}
+          >
+            <View
+              style={{
+                width: `${routinePercent}%`,
+                height: 8,
+                backgroundColor: C.teal,
+                borderRadius: 8,
+              }}
+            />
+          </View>
 
-  <Text style={{ color: C.grey, marginTop: 14 }}>
-    Medicines: {takenCount}/{doses.length} confirmed ({medicinePercent}%)
-  </Text>
+          <Text style={{ color: C.grey, marginTop: 14 }}>
+            {t('Medicines')}: {takenCount}/{doses.length}{' '}
+            {t('confirmed')} ({medicinePercent}%)
+          </Text>
 
-  <View style={{ height: 8, backgroundColor: C.line, borderRadius: 8, marginTop: 6 }}>
-    <View
-      style={{
-        width: `${medicinePercent}%`,
-        height: 8,
-        backgroundColor: C.green,
-        borderRadius: 8,
-      }}
-    />
-  </View>
-</View>
+          <View
+            style={{
+              height: 8,
+              backgroundColor: C.line,
+              borderRadius: 8,
+              marginTop: 6,
+            }}
+          >
+            <View
+              style={{
+                width: `${medicinePercent}%`,
+                height: 8,
+                backgroundColor: C.green,
+                borderRadius: 8,
+              }}
+            />
+          </View>
+        </View>
+
+        {/* Routine list */}
+        <View style={card}>
+          <Text
+            style={{
+              fontSize: 20,
+              fontWeight: '800',
+              color: C.navy,
+            }}
+          >
+            {t("Today's routine")}
+          </Text>
 
           <Text
             style={{
@@ -473,11 +566,15 @@ const sos = () => {
               marginBottom: 8,
             }}
           >
-            {doneCount} of {sorted.length} done
+            {doneCount} {t('of')} {sorted.length} {t('done')}
           </Text>
 
           {sorted.length === 0 && (
-            <Empty t="No routine yet. Use the Routine shortcut to add one." />
+            <Empty
+              text={t(
+                'No routine yet. Use the Routine shortcut to add one.'
+              )}
+            />
           )}
 
           {sorted.map((routine) => {
@@ -535,6 +632,7 @@ const sos = () => {
           })}
         </View>
 
+        {/* Medicines list */}
         <View style={card}>
           <Text
             style={{
@@ -544,11 +642,15 @@ const sos = () => {
               marginBottom: 8,
             }}
           >
-            Medicines
+            {t('Medicines')}
           </Text>
 
           {doses.length === 0 && (
-            <Empty t="No medicines yet. Use the Medicines shortcut to add one." />
+            <Empty
+              text={t(
+                'No medicines yet. Use the Medicines shortcut to add one.'
+              )}
+            />
           )}
 
           {doses.map((dose) => {
@@ -587,11 +689,15 @@ const sos = () => {
                       marginTop: 6,
                     }}
                   >
-                    Confirmed at {taken[dose.key]}
+                    {t('Confirmed at')} {taken[dose.key]}
                   </Text>
                 ) : (
                   <PrimaryButton
-                    title={isSaving ? 'Saving...' : 'I have taken it'}
+                    title={
+                      isSaving
+                        ? t('Saving...')
+                        : t('I have taken it')
+                    }
                     color={C.teal}
                     onPress={() => confirm(dose)}
                   />

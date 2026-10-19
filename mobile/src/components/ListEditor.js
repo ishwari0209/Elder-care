@@ -4,6 +4,7 @@ import { View, Text, TouchableOpacity } from 'react-native';
 import FormField from './FormField';
 import PrimaryButton from './PrimaryButton';
 import { C, card } from '../theme';
+import { useSaathi } from '../context/SaathiContext';
 
 export default function ListEditor({
   fields,
@@ -14,6 +15,7 @@ export default function ListEditor({
   emptyText,
   addLabel,
 }) {
+  const { t } = useSaathi();
   const [draft, setDraft] = useState(null);
   const [idx, setIdx] = useState(-1);
   const [err, setErr] = useState('');
@@ -54,7 +56,7 @@ export default function ListEditor({
             marginBottom: 12,
           }}
         >
-          {idx < 0 ? addLabel : 'Edit'}
+          {idx < 0 ? t(addLabel) : t('Edit')}
         </Text>
 
         
@@ -90,10 +92,10 @@ export default function ListEditor({
           </Text>
         )}
 
-        <PrimaryButton title="Save" onPress={save} />
+        <PrimaryButton title={t("Save")} onPress={save} />
 
         <PrimaryButton
-          title="Cancel"
+          title={t("Cancel")}
           outline
           onPress={() => {
             setDraft(null);
@@ -191,7 +193,7 @@ export default function ListEditor({
       ))}
 
       <PrimaryButton
-        title={`+ ${addLabel}`}
+        title={`+ ${t(addLabel)}`}
         color={C.teal}
         onPress={() => {
           setDraft({ ...blank });

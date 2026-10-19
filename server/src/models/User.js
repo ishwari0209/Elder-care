@@ -20,6 +20,14 @@ const userSchema = new mongoose.Schema(
       required: true,
       select: false,
     },
+    resetOtpHash: {
+      type: String,
+      select: false,
+    },
+    resetOtpExpiresAt: {
+      type: Date,
+      select: false,
+    },
   },
   { timestamps: true }
 );

@@ -77,22 +77,44 @@ async function request(path, options = {}) {
 
 // -------------------- AUTHENTICATION --------------------
 
-export async function signup(details) {
-  const data = await request('/api/auth/signup', {
-    method: 'POST',
-    body: JSON.stringify(details),
+
+ // -------------------- AUTHENTICATION --------------------
+
+export async function signup(nameOrDetails, email, password) {
+  const details =
+    typeof nameOrDetails === "object" && nameOrDetails !== null
+      ? nameOrDetails
+      : { name: nameOrDetails, email, password };
+
+  return request("/api/auth/signup", {
+    method: "POST",
+    body: JSON.stringify({
+      name: details.name?.trim(),
+      email: details.email?.trim().toLowerCase(),
+      password: details.password ?? details.pw,
+    }),
+  });
+}
+
+export async function verifySignup(email, otp) {
+  const data = await request("/api/auth/verify-signup", {
+    method: "POST",
+    body: JSON.stringify({
+      email: email.trim().toLowerCase(),
+      otp: String(otp).trim(),
+    }),
   });
 
   if (data.token) {
     await saveAuthToken(data.token);
   }
 
-  return data;
+  return data.user;
 }
 
 export async function login(email, password) {
-  const data = await request('/api/auth/login', {
-    method: 'POST',
+  const data = await request("/api/auth/login", {
+    method: "POST",
     body: JSON.stringify({
       email: email.trim().toLowerCase(),
       password,
@@ -103,8 +125,31 @@ export async function login(email, password) {
     await saveAuthToken(data.token);
   }
 
-  return data;
+  return data.user;
 }
+
+export async function forgotPassword(email) {
+  return request("/api/auth/forgot-password", {
+    method: "POST",
+    body: JSON.stringify({
+      email: email.trim().toLowerCase(),
+    }),
+  });
+}
+
+export async function resetPassword(email, otp, newPassword) {
+  return request("/api/auth/reset-password", {
+    method: "POST",
+    body: JSON.stringify({
+      email: email.trim().toLowerCase(),
+      otp: String(otp).trim(),
+      newPassword,
+    }),
+  });
+}
+
+
+
 
 // -------------------- PROFILE --------------------
 
@@ -255,4 +300,31 @@ export async function saveCompletion({
   });
 
   return data.completion;
+}
+
+
+// -------------------- FAMILY / CAREGIVER DASHBOARD --------------------
+export async function createCaregiverInvite() {
+  return request('/api/caregiver/invite', { method: 'POST' });
+}
+export async function acceptCaregiverInvite(code) {
+  return request('/api/caregiver/accept', { method: 'POST', body: JSON.stringify({ code }) });
+}
+export async function getLinkedElders() {
+  return request('/api/caregiver/elders');
+}
+export async function getLinkedElderStatus(elderId, date) {
+  const query = date ? `?date=${encodeURIComponent(date)}` : '';
+  return request(`/api/caregiver/elders/${encodeURIComponent(elderId)}/status${query}`);
+}
+
+export async function getLinkedCaregivers() {
+  return request('/api/caregiver/caregivers');
+}
+
+export async function revokeCaregiverAccess(caregiverId) {
+  return request(
+    `/api/caregiver/links/${encodeURIComponent(caregiverId)}`,
+    { method: 'DELETE' }
+  );
 }

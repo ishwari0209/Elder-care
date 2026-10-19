@@ -12,6 +12,7 @@ const medicineRoutes = require("./routes/medicineRoutes");
 const contactRoutes = require("./routes/contactRoutes");
 const completionRoutes = require("./routes/completionRoutes");
 const careStatusRoutes = require("./routes/careStatusRoutes");
+const caregiverRoutes = require("./routes/caregiverRoutes");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -48,6 +49,7 @@ app.use("/api/medicines", medicineRoutes);
 app.use("/api/contacts", contactRoutes);
 app.use("/api/completions", completionRoutes);
 app.use("/api/care-status", careStatusRoutes);
+app.use("/api/caregiver", caregiverRoutes);
 
 async function startServer() {
   try {

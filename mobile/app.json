@@ -1,4 +1,3 @@
-
 {
   "expo": {
     "name": "saathi-mobile",
@@ -7,10 +6,19 @@
     "plugins": [
       "expo-secure-store",
       "@react-native-community/datetimepicker",
-      "expo-notifications"
+      "expo-notifications",
+      "expo-speech-recognition"
     ],
     "android": {
-      "package": "com.anonymous.saathimobile"
+      "package": "com.anonymous.saathimobile",
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
+    },
+    "extra": {
+      "eas": {
+        "projectId": "eb83bfe0-92b7-498c-9497-9445019eac9b"
+      }
     }
   }
 }

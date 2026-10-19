@@ -1,15 +1,17 @@
 
+import { useSaathi } from '../context/SaathiContext';
 import React from 'react';
 import { View, Text, FlatList, StyleSheet } from 'react-native';
 
 export default function CompletionHistory({ completions = [] }) {
+  const { t } = useSaathi();
   return (
     <View style={styles.card}>
-      <Text style={styles.title}>Completion history</Text>
+      <Text style={styles.title}>{t('Completion history')}</Text>
 
       {completions.length === 0 ? (
         <Text style={styles.empty}>
-          No completion records for this day.
+          {t('No completion records for this day.')}
         </Text>
       ) : (
         <FlatList
@@ -20,10 +22,10 @@ export default function CompletionHistory({ completions = [] }) {
             <View style={styles.row}>
               <View style={styles.details}>
                 <Text style={styles.name}>
-                  {item.itemType === 'medicine' ? 'Medicine' : 'Routine'}
+                  {item.itemType === 'medicine' ? t('Medicine') : t('Routine')}
                 </Text>
                 <Text style={styles.meta}>
-                  {item.time || 'Time not recorded'} · {item.date}
+                  {item.time || t('Time not recorded')} · {item.date}
                 </Text>
                 {item.note ? (
                   <Text style={styles.meta}>{item.note}</Text>
@@ -36,7 +38,7 @@ export default function CompletionHistory({ completions = [] }) {
                   !item.reportedDone && styles.pending,
                 ]}
               >
-                {item.reportedDone ? 'Confirmed' : 'Not done'}
+                {item.reportedDone ? t('Confirmed') : t('Not done')}
               </Text>
             </View>
           )}

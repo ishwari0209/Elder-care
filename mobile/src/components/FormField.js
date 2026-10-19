@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { C } from '../theme';
+import { useSaathi } from '../context/SaathiContext';
 
 const Chip = ({ label, on, onPress }) => (
   <TouchableOpacity
@@ -91,6 +92,7 @@ export default function FormField({
   required,
   ...rest
 }) {
+  const { t } = useSaathi();
   const [picker, setPicker] = useState(null);
   const [selectedTime, setSelectedTime] = useState(new Date());
 
@@ -150,7 +152,7 @@ const handlePickerChange = (event, selected) => {
           marginBottom: 6,
         }}
       >
-        {label}{required ? ' *' : ''}
+        {t(label)}{required ? ' *' : ''}
       </Text>
 
       {type === 'chips' && (
@@ -158,7 +160,7 @@ const handlePickerChange = (event, selected) => {
           {options.map((option) => (
             <Chip
               key={option}
-              label={option}
+              label={t(option)}
               on={value === option}
               onPress={() => onChange?.(option)}
             />
@@ -171,7 +173,7 @@ const handlePickerChange = (event, selected) => {
           {options.map((option) => (
             <Chip
               key={option}
-              label={option}
+              label={t(option)}
               on={(Array.isArray(value) ? value : []).includes(option)}
               onPress={() => toggle(option)}
             />
@@ -194,7 +196,7 @@ const handlePickerChange = (event, selected) => {
             }}
           >
             <Text style={{ fontSize: 18, color: value ? C.text : C.grey }}>
-              {value || 'Tap to select time'}
+              {value || t('Tap to select time')}
             </Text>
           </TouchableOpacity>
 
@@ -231,7 +233,7 @@ const handlePickerChange = (event, selected) => {
           }}
         >
           <Text style={{ fontSize: 18, color: value ? C.text : C.grey }}>
-            {value || 'Select date'}
+            {value || t('Select date')}
           </Text>
         </TouchableOpacity>
       )}
@@ -241,6 +243,7 @@ const handlePickerChange = (event, selected) => {
           {...rest}
           value={value == null ? '' : String(value)}
           onChangeText={onChange}
+          placeholder={rest.placeholder ? t(rest.placeholder) : undefined}
           placeholderTextColor={C.grey}
           multiline={type === 'multiline'}
           accessibilityLabel={label}

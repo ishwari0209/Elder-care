@@ -13,7 +13,7 @@ export default function LoginScreen({ navigation }) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const { setCurrentUser } = useSaathi();
+  const { setCurrentUser, t } = useSaathi();
 
   const submit = async () => {
     if (!em.trim() || !pw) {
@@ -82,6 +82,28 @@ export default function LoginScreen({ navigation }) {
         }}
         secureTextEntry
       />
+      
+<TouchableOpacity
+  onPress={() => navigation.navigate("ForgotPassword")}
+  disabled={loading}
+  style={{
+    minHeight: 44,
+    justifyContent: "left",
+    alignSelf: "flex-left",
+    marginTop: 10,
+    
+  }}
+>
+  <Text
+    style={{
+      color: C.teal,
+      fontSize: 15,
+      fontWeight: "700",
+    }}
+  >
+    Forgot password?
+  </Text>
+</TouchableOpacity>
 
       {!!error && (
         <Text style={{ color: C.red, marginVertical: 8 }}>

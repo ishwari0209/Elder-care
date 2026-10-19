@@ -1,4 +1,5 @@
 
+import { useSaathi } from '../context/SaathiContext';
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 
@@ -6,16 +7,17 @@ export default function DailyProgress({
   total = 0,
   completed = 0,
 }) {
+  const { t } = useSaathi();
   const percent = total > 0
     ? Math.round((completed / total) * 100)
     : 0;
 
   return (
     <View style={styles.card}>
-      <Text style={styles.title}>Today's progress</Text>
+      <Text style={styles.title}>{t("Today's progress")}</Text>
 
       <Text style={styles.count}>
-        {completed} of {total} tasks completed
+        {completed} {t('of')} {total} {t('tasks completed')}
       </Text>
 
       <View
@@ -32,7 +34,7 @@ export default function DailyProgress({
         />
       </View>
 
-      <Text style={styles.percent}>{percent}% complete</Text>
+      <Text style={styles.percent}>{percent}% {t('complete')}</Text>
     </View>
   );
 }
