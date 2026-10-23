@@ -75,7 +75,6 @@ async function request(path, options = {}) {
 
 
 
-// -------------------- AUTHENTICATION --------------------
 
 
  // -------------------- AUTHENTICATION --------------------
@@ -119,6 +118,19 @@ export async function login(email, password) {
       email: email.trim().toLowerCase(),
       password,
     }),
+  });
+
+  if (data.token) {
+    await saveAuthToken(data.token);
+  }
+
+  return data.user;
+}
+
+export async function googleAuth(idToken) {
+  const data = await request("/api/auth/google", {
+    method: "POST",
+    body: JSON.stringify({ idToken }),
   });
 
   if (data.token) {
@@ -174,9 +186,11 @@ export async function getRoutines() {
 }
 
 export async function saveRoutines(routines) {
-  return request('/api/routines', {
+  return request('/api/routines/sync/all', {
     method: 'PUT',
-    body: JSON.stringify({ routines }),
+    body: JSON.stringify({
+      items: Array.isArray(routines) ? routines : [],
+    }),
   });
 }
 

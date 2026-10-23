@@ -30,7 +30,7 @@ export default function ForgotPasswordScreen({ navigation }) {
 
     if (step === "email") {
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-        setError("Enter a valid email address.");
+        setError(t("Enter a valid email address."));
         return;
       }
 
@@ -40,7 +40,7 @@ export default function ForgotPasswordScreen({ navigation }) {
         setMessage(result.message);
         setStep("reset");
       } catch (err) {
-        setError(err.message || "Could not request a reset code.");
+        setError(err.message || t("Could not request a reset code."));
       } finally {
         setLoading(false);
       }
@@ -49,17 +49,17 @@ export default function ForgotPasswordScreen({ navigation }) {
     }
 
     if (!/^\d{6}$/.test(otp.trim())) {
-      setError("Enter the 6-digit code.");
+      setError(t("Enter the 6-digit code."));
       return;
     }
 
     if (password.length < 8) {
-      setError("Use at least 8 characters for your new password.");
+      setError(t("Use at least 8 characters for your new password."));
       return;
     }
 
     if (password !== confirmPassword) {
-      setError("Passwords do not match.");
+      setError(t("Passwords do not match."));
       return;
     }
 
@@ -72,10 +72,10 @@ export default function ForgotPasswordScreen({ navigation }) {
         password
       );
 
-      setMessage(result.message);
-      navigation.navigate("Login");
+      setMessage(t("Password reset successfully. Please log in with your new password."));
+      setStep("done");
     } catch (err) {
-      setError(err.message || "Could not reset your password.");
+      setError(err.message || t("Could not reset your password."));
     } finally {
       setLoading(false);
     }
@@ -83,20 +83,20 @@ export default function ForgotPasswordScreen({ navigation }) {
 
   return (
     <Screen
-      title="Forgot Password"
+      title={t("Forgot Password")}
       subtitle={
         step === "email"
-          ? "Enter your registered email to receive a reset code."
-          : "Enter the code from your email and choose a new password."
+          ? t("Enter your registered email to receive a reset code.")
+          : step === "done" ? t("Password reset successfully. Please log in with your new password.") : t("Enter the code from your email and choose a new password.")
       }
       onBack={() => navigation.navigate("Login")}
-      onNext={submit}
+      onNext={step === "done" ? () => navigation.navigate("Login") : submit}
       nextLabel={
         loading
-          ? "Please wait..."
+          ? t("Please wait...")
           : step === "email"
-            ? "Send Reset Code"
-            : "Reset Password"
+            ? t("Send Reset Code")
+            : step === "done" ? t("Back to Log In") : t("Reset Password")
       }
     >
       {loading && (
@@ -104,7 +104,7 @@ export default function ForgotPasswordScreen({ navigation }) {
       )}
 
       <FormField
-        label="Email"
+        label={t("Email")}
         value={email}
         onChange={(v) => {
           setEmail(v);
@@ -117,7 +117,7 @@ export default function ForgotPasswordScreen({ navigation }) {
       {step === "reset" && (
         <>
           <FormField
-            label="6-digit verification code"
+            label={t("6-digit verification code")}
             value={otp}
             onChange={(v) => {
               setOtp(v.replace(/\D/g, "").slice(0, 6));
@@ -127,7 +127,7 @@ export default function ForgotPasswordScreen({ navigation }) {
           />
 
           <PasswordField
-            label="New password"
+            label={t("New password")}
             value={password}
             onChange={(v) => {
               setPassword(v);
@@ -136,7 +136,7 @@ export default function ForgotPasswordScreen({ navigation }) {
           />
 
           <PasswordField
-            label="Confirm new password"
+            label={t("Confirm new password")}
             value={confirmPassword}
             onChange={(v) => {
               setConfirmPassword(v);
@@ -164,7 +164,7 @@ export default function ForgotPasswordScreen({ navigation }) {
         style={{ minHeight: 44, justifyContent: "center" }}
       >
         <Text style={{ color: C.teal, fontWeight: "700" }}>
-          Back to Log In
+          {t("Back to Log In")}
         </Text>
       </TouchableOpacity>
     </Screen>

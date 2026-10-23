@@ -2,7 +2,9 @@
 import React, { useState } from "react";
 import { Text, TouchableOpacity, ActivityIndicator } from "react-native";
 import Screen from "../components/Screen";
+import GoogleButton from "../components/GoogleButton";
 import FormField from "../components/FormField";
+import PasswordField from "../components/PasswordField";
 import { C } from "../theme";
 import { useSaathi } from "../context/SaathiContext";
 import { login } from "../api";
@@ -17,7 +19,7 @@ export default function LoginScreen({ navigation }) {
 
   const submit = async () => {
     if (!em.trim() || !pw) {
-      setError("Enter your email and password.");
+      setError(t("Enter your email and password."));
       return;
     }
 
@@ -34,7 +36,7 @@ export default function LoginScreen({ navigation }) {
         routes: [{ name: "Dashboard" }],
       });
     } catch (err) {
-      setError(err.message || "Login failed. Please try again.");
+      setError(err.message || t("Login failed. Please try again."));
     } finally {
       setLoading(false);
     }
@@ -42,11 +44,22 @@ export default function LoginScreen({ navigation }) {
 
   return (
     <Screen
-      title="Log In"
-      subtitle="Sign in to open your Saathi dashboard."
+      title={t("Log In")}
+      subtitle={t("Sign in to open your Saathi dashboard.")}
       onBack={() => navigation.navigate("Landing")}
       onNext={submit}
-      nextLabel={loading ? "Logging in..." : "Log In"}
+      footer={
+        <GoogleButton
+          label="Log in with Google"
+          disabled={loading}
+          onError={setError}
+          onSuccess={(user) => {
+        setCurrentUser(user);
+        navigation.reset({ index: 0, routes: [{ name: "Dashboard" }] });
+      }}
+        />
+      }
+      nextLabel={loading ? t("Logging in...") : t("Log In")}
     >
       {loading && (
         <ActivityIndicator color={C.teal} style={{ marginBottom: 10 }} />
@@ -59,11 +72,11 @@ export default function LoginScreen({ navigation }) {
           marginBottom: 10,
         }}
       >
-        Log in using your registered Saathi account.
+        {t("Log in using your registered Saathi account.")}
       </Text>
 
       <FormField
-        label="Email"
+        label={t("Email")}
         value={em}
         onChange={(v) => {
           setEm(v);
@@ -73,14 +86,14 @@ export default function LoginScreen({ navigation }) {
         autoCapitalize="none"
       />
 
-      <FormField
-        label="Password"
+      <PasswordField
+        label={t("Password")}
         value={pw}
         onChange={(v) => {
           setPw(v);
           setError("");
         }}
-        secureTextEntry
+        autoCapitalize="none"
       />
       
 <TouchableOpacity
@@ -88,8 +101,8 @@ export default function LoginScreen({ navigation }) {
   disabled={loading}
   style={{
     minHeight: 44,
-    justifyContent: "left",
-    alignSelf: "flex-left",
+    justifyContent: "flex-start",
+    alignSelf: "flex-start",
     marginTop: 10,
     
   }}
@@ -101,7 +114,7 @@ export default function LoginScreen({ navigation }) {
       fontWeight: "700",
     }}
   >
-    Forgot password?
+    {t("Forgot password?")}
   </Text>
 </TouchableOpacity>
 
@@ -123,7 +136,7 @@ export default function LoginScreen({ navigation }) {
             fontWeight: "700",
           }}
         >
-          New here? Sign up
+          {t("New here? Sign up")}
         </Text>
       </TouchableOpacity>
     </Screen>

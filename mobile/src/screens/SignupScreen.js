@@ -8,6 +8,7 @@ import {
 
 import Screen from "../components/Screen";
 import FormField from "../components/FormField";
+import GoogleButton from "../components/GoogleButton";
 import PasswordField from "../components/PasswordField";
 import { C } from "../theme";
 import { useSaathi } from "../context/SaathiContext";
@@ -35,22 +36,22 @@ export default function SignupScreen({ navigation }) {
 
     if (step === "details") {
       if (!f.name.trim()) {
-        setError("Please enter your name.");
+        setError(t("Please enter your name."));
         return;
       }
 
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email.trim())) {
-        setError("Enter a valid email address.");
+        setError(t("Enter a valid email address."));
         return;
       }
 
       if (f.pw.length < 8) {
-        setError("Use at least 8 characters for your password.");
+        setError(t("Use at least 8 characters for your password."));
         return;
       }
 
       if (f.pw !== f.pw2) {
-        setError("Passwords do not match.");
+        setError(t("Passwords do not match."));
         return;
       }
 
@@ -65,7 +66,7 @@ export default function SignupScreen({ navigation }) {
 
         setStep("otp");
       } catch (err) {
-        setError(err.message || "Could not send the verification code.");
+        setError(err.message || t("Could not send the verification code."));
       } finally {
         setLoading(false);
       }
@@ -74,7 +75,7 @@ export default function SignupScreen({ navigation }) {
     }
 
     if (!/^\d{6}$/.test(f.otp.trim())) {
-      setError("Enter the 6-digit code sent to your email.");
+      setError(t("Enter the 6-digit code sent to your email."));
       return;
     }
 
@@ -93,7 +94,7 @@ export default function SignupScreen({ navigation }) {
         routes: [{ name: "Dashboard" }],
       });
     } catch (err) {
-      setError(err.message || "Verification failed. Please try again.");
+      setError(err.message || t("Verification failed. Please try again."));
     } finally {
       setLoading(false);
     }
@@ -101,11 +102,11 @@ export default function SignupScreen({ navigation }) {
 
   return (
     <Screen
-      title={step === "details" ? "Create Account" : "Verify Email"}
+      title={step === "details" ? t("Create Account") : t("Verify Email")}
       subtitle={
         step === "details"
-          ? "Create your personal Saathi account."
-          : `Enter the 6-digit code sent to ${f.email}.`
+          ? t("Create your personal Saathi account.")
+          : `${t("Enter the 6-digit code sent to your email.")} ${f.email}.`
       }
       onBack={() => {
         if (step === "otp") {
@@ -116,12 +117,25 @@ export default function SignupScreen({ navigation }) {
         }
       }}
       onNext={submit}
+      footer={
+        step === "details" ? (
+          <GoogleButton
+            label="Sign up with Google"
+            disabled={loading}
+            onError={setError}
+            onSuccess={(user) => {
+        setCurrentUser(user);
+        navigation.reset({ index: 0, routes: [{ name: "Dashboard" }] });
+      }}
+          />
+        ) : null
+      }
       nextLabel={
         loading
-          ? "Please wait..."
+          ? t("Please wait...")
           : step === "details"
-            ? "Send Verification Code"
-            : "Verify & Create Account"
+            ? t("Send Verification Code")
+            : t("Verify & Create Account")
       }
     >
       {loading && (
@@ -131,7 +145,7 @@ export default function SignupScreen({ navigation }) {
       {step === "details" ? (
         <>
           <FormField
-            label="Full name"
+            label={t("Full name")}
             value={f.name}
             onChange={(v) => {
               set("name")(v);
@@ -141,7 +155,7 @@ export default function SignupScreen({ navigation }) {
           />
 
           <FormField
-            label="Email"
+            label={t("Email")}
             value={f.email}
             onChange={(v) => {
               set("email")(v);
@@ -152,7 +166,7 @@ export default function SignupScreen({ navigation }) {
           />
 
           <PasswordField
-            label="Password"
+            label={t("Password")}
             value={f.pw}
             onChange={(v) => {
               set("pw")(v);
@@ -161,7 +175,7 @@ export default function SignupScreen({ navigation }) {
           />
 
           <PasswordField
-            label="Confirm password"
+            label={t("Confirm password")}
             value={f.pw2}
             onChange={(v) => {
               set("pw2")(v);
@@ -172,7 +186,7 @@ export default function SignupScreen({ navigation }) {
       ) : (
         <>
           <FormField
-            label="Email verification code"
+            label={t("Email verification code")}
             value={f.otp}
             onChange={(v) => {
               set("otp")(v.replace(/\D/g, "").slice(0, 6));
@@ -192,7 +206,7 @@ export default function SignupScreen({ navigation }) {
             style={{ minHeight: 44, justifyContent: "center" }}
           >
             <Text style={{ color: C.teal, fontWeight: "700" }}>
-              Change email or account details
+              {t("Change email or account details")}
             </Text>
           </TouchableOpacity>
         </>
@@ -210,7 +224,7 @@ export default function SignupScreen({ navigation }) {
         style={{ minHeight: 44, justifyContent: "center" }}
       >
         <Text style={{ color: C.teal, fontSize: 16, fontWeight: "700" }}>
-          Already have an account? Log in
+          {t("Already have an account? Log in")}
         </Text>
       </TouchableOpacity>
     </Screen>

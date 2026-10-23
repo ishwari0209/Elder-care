@@ -1,14 +1,32 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { Alert, Platform } from 'react-native';
+import { Alert, Platform, AppState } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import * as API from '../api';
-
+import { syncRoutineReminders, clearRoutineReminders } from '../utlis/routineReminders';
+import { syncMedicineReminders } from '../utlis/medicineReminders';
 const Ctx = createContext(null);
 export const useSaathi = () => useContext(Ctx);
 export const ALL_DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 
 const translations = {
   mr: {
+    'Please enter your name.':'कृपया तुमचे नाव टाका.',
+    'Enter the 6-digit code.':'६ अंकी कोड टाका.',
+    'Use at least 8 characters for your new password.':'नवीन पासवर्ड किमान ८ अक्षरांचा असावा.',
+    'Enter a valid email address.':'वैध ईमेल पत्ता टाका.',
+    'Use at least 8 characters for your password.':'पासवर्ड किमान ८ अक्षरांचा असावा.',
+    'Passwords do not match.':'पासवर्ड जुळत नाहीत.',
+    'Could not send the verification code.':'पडताळणी कोड पाठवता आला नाही.',
+    'Enter the 6-digit code sent to your email.':'ईमेलवर पाठवलेला ६ अंकी कोड टाका.',
+    'Verification failed. Please try again.':'पडताळणी अयशस्वी झाली. पुन्हा प्रयत्न करा.',
+    'Login failed. Please try again.':'लॉग इन अयशस्वी झाले. पुन्हा प्रयत्न करा.',
+    'Enter your registered email to receive a reset code.':'रीसेट कोड मिळवण्यासाठी नोंदणीकृत ईमेल टाका.',
+    'Enter the code from your email and choose a new password.':'ईमेलमधील कोड टाका आणि नवीन पासवर्ड निवडा.',
+    '6-digit verification code':'६ अंकी पडताळणी कोड','New password':'नवीन पासवर्ड','Confirm new password':'नवीन पासवर्डची पुष्टी करा',
+    'Back to Log In':'लॉग इनकडे परत जा','Could not request a reset code.':'रीसेट कोड मागवता आला नाही.',
+    'Could not reset your password.':'पासवर्ड रीसेट करता आला नाही.',
+    'Password reset successfully. Please log in with your new password.':'पासवर्ड रीसेट झाला. नवीन पासवर्डने लॉग इन करा.',
+
     'Language':'भाषा','Choose your language':'तुमची भाषा निवडा','Continue':'पुढे चला','Back':'मागे',
     'Login':'लॉग इन','Log In':'लॉग इन','Sign Up':'नोंदणी करा','Create Account':'खाते तयार करा',
     'Verify Email':'ईमेल सत्यापित करा','Forgot password?':'पासवर्ड विसरलात?','New here? Sign up':'नवीन आहात? नोंदणी करा',
@@ -146,6 +164,23 @@ const translations = {
 'Confirmed at': 'या वेळी पुष्टी झाली',
   },
   hi: {
+    'Please enter your name.':'कृपया अपना नाम दर्ज करें।',
+    'Enter the 6-digit code.':'6 अंकों का कोड दर्ज करें।',
+    'Use at least 8 characters for your new password.':'नया पासवर्ड कम से कम 8 अक्षरों का होना चाहिए।',
+    'Enter a valid email address.':'मान्य ईमेल पता दर्ज करें।',
+    'Use at least 8 characters for your password.':'पासवर्ड कम से कम 8 अक्षरों का होना चाहिए।',
+    'Passwords do not match.':'पासवर्ड मेल नहीं खाते।',
+    'Could not send the verification code.':'सत्यापन कोड नहीं भेजा जा सका।',
+    'Enter the 6-digit code sent to your email.':'ईमेल पर भेजा गया 6 अंकों का कोड दर्ज करें।',
+    'Verification failed. Please try again.':'सत्यापन विफल हुआ। फिर कोशिश करें।',
+    'Login failed. Please try again.':'लॉग इन विफल हुआ। फिर कोशिश करें।',
+    'Enter your registered email to receive a reset code.':'रीसेट कोड पाने के लिए पंजीकृत ईमेल दर्ज करें।',
+    'Enter the code from your email and choose a new password.':'ईमेल का कोड दर्ज करें और नया पासवर्ड चुनें।',
+    '6-digit verification code':'6 अंकों का सत्यापन कोड','New password':'नया पासवर्ड','Confirm new password':'नए पासवर्ड की पुष्टि करें',
+    'Back to Log In':'लॉग इन पर वापस जाएँ','Could not request a reset code.':'रीसेट कोड का अनुरोध नहीं हो सका।',
+    'Could not reset your password.':'पासवर्ड रीसेट नहीं हो सका।',
+    'Password reset successfully. Please log in with your new password.':'पासवर्ड रीसेट हो गया। नए पासवर्ड से लॉग इन करें।',
+
     'Language':'भाषा','Choose your language':'अपनी भाषा चुनें','Continue':'जारी रखें','Back':'वापस',
     'Login':'लॉग इन','Log In':'लॉग इन','Sign Up':'साइन अप','Create Account':'खाता बनाएँ',
     'Verify Email':'ईमेल सत्यापित करें','Forgot password?':'पासवर्ड भूल गए?','New here? Sign up':'नए हैं? साइन अप करें',
@@ -282,7 +317,11 @@ const translations = {
 'Confirmed at': 'इस समय पुष्टि हुई',
   }
 };
-export const translate = (key, language) => translations[language]?.[key] || key;
+const googleTr = {
+  mr: { 'Sign up with Google':'Google सह नोंदणी करा', 'Log in with Google':'Google सह लॉग इन करा', 'Continue with Google':'Google सह सुरू ठेवा', 'or':'किंवा', 'Google sign-in failed. Please try again.':'Google साइन-इन अयशस्वी. कृपया पुन्हा प्रयत्न करा.' },
+  hi: { 'Sign up with Google':'Google से साइन अप करें', 'Log in with Google':'Google से लॉग इन करें', 'Continue with Google':'Google से जारी रखें', 'or':'या', 'Google sign-in failed. Please try again.':'Google साइन-इन विफल रहा। कृपया पुनः प्रयास करें।' },
+};
+export const translate = (key, language) => translations[language]?.[key] || googleTr[language]?.[key] || key;
 export function SaathiProvider({ children }) {
   const [currentUser, setCurrentUserState] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
@@ -301,6 +340,7 @@ export function SaathiProvider({ children }) {
   const [contacts, setContactsState] = useState(emptyContacts);
   const [done, setDone] = useState({});
   const [taken, setTaken] = useState({});
+  
   const loadUserData = useCallback(async () => {
     try {
       const [p, r, m, c] = await Promise.all([API.getProfile(), API.getRoutines(), API.getMedicines(), API.getContacts()]);
@@ -341,6 +381,25 @@ export function SaathiProvider({ children }) {
     if (currentUser) loadUserData();
     else { setProfileState(emptyProfile); setRoutinesState([]); setMedicinesState([]); setContactsState(emptyContacts); setDone({}); setTaken({}); }
   }, [currentUser, loadUserData]);
+  // Re-schedule "5 minutes before" routine reminders whenever routines change,
+  // the profile language changes, or the user logs in / out.
+  useEffect(() => {
+    if (!currentUser) { clearRoutineReminders(); return; }
+    syncRoutineReminders(routines, profile.language, language);
+  }, [currentUser, routines, profile.language, language]);
+  useEffect(() => {
+  if (!currentUser) {
+    return;
+  }
+
+  syncMedicineReminders(medicines);
+
+  // Refresh the rolling reminder window whenever the app comes to the foreground.
+  const sub = AppState.addEventListener('change', (state) => {
+    if (state === 'active') syncMedicineReminders(medicines);
+  });
+  return () => sub.remove();
+}, [currentUser, medicines]);
   const setProfile = useCallback((next) => setProfileState(prev => typeof next === 'function' ? next(prev) : next), []);
   const setRoutines = useCallback((next) => setRoutinesState(prev => { const value = typeof next === 'function' ? next(prev) : next; API.saveRoutines(value).catch(error => Alert.alert('Save failed', error.message)); return value; }), []);
   const setMedicines = useCallback((next) => setMedicinesState((prev) => { const value = typeof next === 'function' ? next(prev) : next; API.saveMedicines(value, prev).then(saved => { if (Array.isArray(saved)) setMedicinesState(saved); }).catch(error => Alert.alert('Save failed', error.message)); return value; }), []);

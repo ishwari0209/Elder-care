@@ -1,27 +1,55 @@
-
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import FormField from './FormField';
 import PrimaryButton from './PrimaryButton';
 import { C, card } from '../theme';
 import { useSaathi } from '../context/SaathiContext';
+import { availableDays, reconcileDays } from '../utlis/dateDays';
 
 export default function ListEditor({
-  fields,
-  items,
+  fields = [],
+  items: incomingItems = [],
   setItems,
-  blank,
-  line,
-  emptyText,
-  addLabel,
+  blank = {},
+  line = () => '',
+  emptyText = '',
+  addLabel = 'Add item',
 }) {
+  const items = Array.isArray(incomingItems) ? incomingItems : [];
+  const safeFields = Array.isArray(fields) ? fields : [];
+
   const { t } = useSaathi();
   const [draft, setDraft] = useState(null);
   const [idx, setIdx] = useState(-1);
   const [err, setErr] = useState('');
 
+  const updateField = (key, value) => {
+    setDraft((previous) => {
+      const next = { ...previous, [key]: value };
+      // When start/end change, keep "Repeat days" inside the chosen range.
+      if ((key === 'start' || key === 'end') && 'days' in previous) {
+        next.days = reconcileDays(
+          previous.days, previous.start, previous.end, next.start, next.end
+        );
+      }
+      return next;
+    });
+    setErr('');
+  };
+
+  const cancel = () => {
+    setDraft(null);
+    setIdx(-1);
+    setErr('');
+  };
+
   const save = () => {
-    const missing = fields.find(
+    if (!draft || typeof setItems !== 'function') {
+      setErr('Unable to save. Please try again.');
+      return;
+    }
+
+    const missing = safeFields.find(
       (field) =>
         field.required &&
         !String(draft[field.key] ?? '').trim()
@@ -32,17 +60,27 @@ export default function ListEditor({
       return;
     }
 
-    setItems(
+    if (
+      'days' in draft && 'start' in draft &&
+      draft.start && draft.end && draft.end < draft.start
+    ) {
+      setErr('End date must be on or after the start date');
+      return;
+    }
+    if ('days' in draft && 'start' in draft && !(draft.days || []).length) {
+      setErr('Select at least one repeat day');
+      return;
+    }
+
+    const updatedItems =
       idx < 0
         ? [...items, draft]
         : items.map((item, index) =>
             index === idx ? draft : item
-          )
-    );
+          );
 
-    setDraft(null);
-    setIdx(-1);
-    setErr('');
+    setItems(updatedItems);
+    cancel();
   };
 
   if (draft !== null) {
@@ -59,26 +97,22 @@ export default function ListEditor({
           {idx < 0 ? t(addLabel) : t('Edit')}
         </Text>
 
-        
-{fields.map((field, index) => {
-  const { key: fieldKey, ...fieldProps } = field;
+        {safeFields.map((field, index) => {
+          const { key: fieldKey, ...fieldProps } = field;
 
-  return (
-    <FormField
-      key={fieldKey ?? index}
-      {...fieldProps}
-      value={draft[fieldKey] ?? ''}
-      onChange={(value) => {
-        setDraft((previous) => ({
-          ...previous,
-          [fieldKey]: value,
-        }));
-        setErr('');
-      }}
-    />
-  );
-})}
-
+          return (
+            <FormField
+              key={fieldKey ?? index}
+              {...fieldProps}
+              {...(field.type === 'days' && 'start' in draft
+                ? { options: availableDays(draft.start, draft.end) }
+                : {})}
+              type={field.type || 'text'}
+              value={draft[fieldKey] ?? ''}
+              onChange={(value) => updateField(fieldKey, value)}
+            />
+          );
+        })}
 
         {!!err && (
           <Text
@@ -92,16 +126,12 @@ export default function ListEditor({
           </Text>
         )}
 
-        <PrimaryButton title={t("Save")} onPress={save} />
+        <PrimaryButton title={t('Save')} onPress={save} />
 
         <PrimaryButton
-          title={t("Cancel")}
+          title={t('Cancel')}
           outline
-          onPress={() => {
-            setDraft(null);
-            setIdx(-1);
-            setErr('');
-          }}
+          onPress={cancel}
         />
       </View>
     );
@@ -124,7 +154,7 @@ export default function ListEditor({
       )}
 
       {items.map((item, index) => (
-        <View key={item._id ?? index} style={card}>
+        <View key={item?._id ?? index} style={card}>
           <Text
             style={{
               fontSize: 19,
@@ -132,7 +162,7 @@ export default function ListEditor({
               color: C.navy,
             }}
           >
-            {item.name}
+            {item?.name || 'Untitled'}
           </Text>
 
           <Text
@@ -170,9 +200,11 @@ export default function ListEditor({
             </TouchableOpacity>
 
             <TouchableOpacity
-              onPress={() =>
-                setItems(items.filter((_, i) => i !== index))
-              }
+              onPress={() => {
+                if (typeof setItems === 'function') {
+                  setItems(items.filter((_, i) => i !== index));
+                }
+              }}
               style={{
                 minHeight: 44,
                 justifyContent: 'center',

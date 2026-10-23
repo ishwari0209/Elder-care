@@ -1,5 +1,6 @@
 import React from 'react';
 import LanguageScreen from '../screens/LanguageScreen';
+import NotificationTest from '../NotificationTest';
 import ForgotPasswordScreen from "../screens/ForgotPasswordScreen";
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -29,6 +30,11 @@ export default function AppNavigator() {
         <Stack.Screen
   name="ForgotPassword"
   component={ForgotPasswordScreen}
+/>
+<Stack.Screen
+  name="NotificationTest"
+  component={NotificationTest}
+  options={{ title: 'Test Notifications' }}
 />
         <Stack.Screen name="Contacts" component={EmergencyContactsScreen} />
         <Stack.Screen name="Review" component={ReviewSetupScreen} />

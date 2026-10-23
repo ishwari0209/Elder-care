@@ -20,3 +20,5 @@ ios/Pods/
 # Logs
 npm-debug.log*
 mobile/android/app/debug.keystore
+hs_err_pid*.log
+replay_pid*.log

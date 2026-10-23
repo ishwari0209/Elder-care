@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import {
   View,
@@ -6,7 +5,6 @@ import {
   TextInput,
   TouchableOpacity,
   Platform,
-  Alert,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { C } from '../theme';
@@ -37,13 +35,12 @@ const Chip = ({ label, on, onPress }) => (
   </TouchableOpacity>
 );
 
-const pad = (number) => String(number).padStart(2, '0');
+const pad = (n) => String(n).padStart(2, '0');
 
 const parseDate = (value) => {
-  if (value && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+  if (value && /^\d{4}-\d{2}-\d{2}$/.test(String(value))) {
     const [year, month, day] = value.split('-').map(Number);
-    const date = new Date(year, month - 1, day);
-    if (!Number.isNaN(date.getTime())) return date;
+    return new Date(year, month - 1, day, 12, 0, 0, 0);
   }
   return new Date();
 };
@@ -52,7 +49,9 @@ const formatDate = (date) =>
   `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 
 const parseTime = (value) => {
-  const match = String(value || '').trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
+  const match = String(value || '')
+    .trim()
+    .match(/^(\d{1,2})[:.](\d{2})\s*(AM|PM)?$/i);
 
   if (!match) {
     const now = new Date();
@@ -62,13 +61,15 @@ const parseTime = (value) => {
 
   let hour = Number(match[1]);
   const minute = Number(match[2]);
-  const ampm = match[3]?.toUpperCase();
+  const period = match[3]?.toUpperCase();
 
-  if (hour > 23 || minute > 59 || hour < 0) return new Date();
+  if (minute > 59) return new Date();
 
-  if (ampm) {
+  if (period) {
     if (hour < 1 || hour > 12) return new Date();
-    hour = hour % 12 + (ampm === 'PM' ? 12 : 0);
+    hour = (hour % 12) + (period === 'PM' ? 12 : 0);
+  } else if (hour > 23) {
+    return new Date();
   }
 
   const date = new Date();
@@ -78,8 +79,9 @@ const parseTime = (value) => {
 
 const formatTime = (date) => {
   const hour = date.getHours();
-  const suffix = hour >= 12 ? 'PM' : 'AM';
-  return `${hour % 12 || 12}:${pad(date.getMinutes())} ${suffix}`;
+  return `${hour % 12 || 12}:${pad(date.getMinutes())} ${
+    hour >= 12 ? 'PM' : 'AM'
+  }`;
 };
 
 export default function FormField({
@@ -97,50 +99,52 @@ export default function FormField({
   const [selectedTime, setSelectedTime] = useState(new Date());
 
   const toggle = (option) => {
-    const currentValue = Array.isArray(value) ? value : [];
+    const current = Array.isArray(value) ? value : [];
     onChange?.(
-      currentValue.includes(option)
-        ? currentValue.filter((item) => item !== option)
-        : [...currentValue, option]
+      current.includes(option)
+        ? current.filter((item) => item !== option)
+        : [...current, option]
     );
   };
 
   const openTimePicker = () => {
-    setSelectedTime(parseTime(''));
+    setSelectedTime(parseTime(value));
     setPicker('time');
   };
 
-  const openDatePicker = () => setPicker('date');
+  const openDatePicker = () => {
+    setPicker('date');
+  };
 
- 
-const handlePickerChange = (event, selected) => {
-  if (Platform.OS === 'android') {
-    setPicker(null);
-  }
-
-  if (event.type === 'dismissed' || !selected) return;
-
-  if (picker === 'time') {
-    const newTime = formatTime(selected);
-    const current = String(value || '')
-      .split(',')
-      .map((item) => item.trim())
-      .filter(Boolean);
-
-    // Replace the most recently added time if editing it;
-    // otherwise add a new time.
-    if (current.length > 0) {
-      current[current.length - 1] = newTime;
-    } else {
-      current.push(newTime);
+  const handlePickerChange = (event, selectedDate) => {
+    if (event.type === 'dismissed') {
+      setPicker(null);
+      return;
     }
 
-    onChange?.([...new Set(current)].join(', '));
-  } else if (picker === 'date') {
-    onChange?.(formatDate(selected));
-  }
-};
+    if (!selectedDate) return;
 
+    if (picker === 'time') {
+      const formatted = formatTime(selectedDate);
+
+      // Support adding multiple medicine times.
+      const existing = String(value || '')
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean);
+
+      onChange?.([...existing, formatted].join(', '));
+      setSelectedTime(selectedDate);
+    } else if (picker === 'date') {
+      onChange?.(formatDate(selectedDate));
+      setPicker(null);
+    }
+
+    // Android closes the native picker after selection.
+    if (Platform.OS === 'android') {
+      setPicker(null);
+    }
+  };
 
   return (
     <View style={{ marginBottom: 14 }}>
@@ -170,6 +174,11 @@ const handlePickerChange = (event, selected) => {
 
       {type === 'days' && (
         <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+          {options.length === 0 && (
+            <Text style={{ color: C.red, fontSize: 15 }}>
+              {t('End date must be on or after the start date')}
+            </Text>
+          )}
           {options.map((option) => (
             <Chip
               key={option}
@@ -207,6 +216,7 @@ const handlePickerChange = (event, selected) => {
                   .split(',')
                   .map((item) => item.trim())
                   .filter(Boolean);
+
                 onChange?.(times.slice(0, -1).join(', '));
               }}
               style={{ paddingVertical: 8, alignSelf: 'flex-start' }}
@@ -262,14 +272,12 @@ const handlePickerChange = (event, selected) => {
 
       {picker && (
         <DateTimePicker
-  value={picker === 'time' ? selectedTime : parseDate(value)}
-  mode={picker}
-  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-  is24Hour={false}
-  onValueChange={(event) => handlePickerChange(event, event?.nativeEvent?.timestamp
-    ? new Date(event.nativeEvent.timestamp)
-    : undefined)}
-/>
+          value={picker === 'time' ? selectedTime : parseDate(value)}
+          mode={picker}
+          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          is24Hour={false}
+          onChange={handlePickerChange}
+        />
       )}
 
       {!!error && (

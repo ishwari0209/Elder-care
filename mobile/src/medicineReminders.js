@@ -46,7 +46,6 @@ export async function syncMedicineReminders(medicines) {
       await Notifications.setNotificationChannelAsync('medicine-reminders', {
         name: 'Medicine reminders',
         importance: Notifications.AndroidImportance.MAX,
-        sound: 'default',
       });
     }
 
@@ -118,7 +117,7 @@ export async function syncMedicineReminders(medicines) {
             content: {
               title: 'Saathi medicine reminder',
               body: `Time for ${medicine.name} — ${medicine.dosage}. Follow your prescribed instructions.`,
-              sound: 'default',
+              sound: true,
               data: {
                 saathiMedicineReminder: true,
                 medicineId: String(medicine._id || ''),

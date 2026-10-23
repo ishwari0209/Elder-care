@@ -20,7 +20,7 @@ router.post('/', asyncHandler(async (req, res) => {
   const record = await Completion.findOneAndUpdate(
     { userId: req.user.id, itemType, itemId, date, time },
     { userId: req.user.id, itemType, itemId, date, time, reportedDone, note },
-    { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
+    {  returnDocument: 'after', upsert: true, runValidators: true, setDefaultsOnInsert: true }
   );
   res.status(200).json({ message: 'User-reported completion saved', completion: record });
 }));

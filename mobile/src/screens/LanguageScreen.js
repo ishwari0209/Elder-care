@@ -1,3 +1,4 @@
+import Backdrop from '../components/Backdrop';
 import React, { useEffect } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -17,7 +18,7 @@ export default function LanguageScreen({ navigation }) {
     await setLanguage(id);
   };
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: C.bg, justifyContent: 'center', padding: 22 }}>
+    <Backdrop><SafeAreaView style={{ flex: 1, justifyContent: 'center', padding: 22 }}>
       <Text style={{ fontSize: 30, fontWeight: '900', color: C.navy, marginBottom: 8 }}>Saathi</Text>
       <Text style={{ fontSize: 24, fontWeight: '800', color: C.navy, marginBottom: 8 }}>{t('Choose your language')}</Text>
       <Text style={{ color: C.grey, fontSize: 16, marginBottom: 22 }}>Choose a language for the app. You can change it later.</Text>
@@ -28,6 +29,6 @@ export default function LanguageScreen({ navigation }) {
           <Text style={{ fontSize: 15, color: C.grey, marginTop: 4 }}>{item.subtitle}</Text>
         </TouchableOpacity>
       ))}
-    </SafeAreaView>
+    </SafeAreaView></Backdrop>
   );
 }

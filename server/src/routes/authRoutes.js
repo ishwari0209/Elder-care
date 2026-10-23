@@ -4,6 +4,7 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const nodemailer = require("nodemailer");
 const { randomInt } = require("crypto");
+const { OAuth2Client } = require("google-auth-library");
 
 const User = require("../models/User");
 const PendingSignup = require("../models/PendingSignup");
@@ -228,7 +229,12 @@ router.post("/login", async (req, res) => {
       email: email.trim().toLowerCase(),
     }).select("+password");
 
-    if (!user || !(await bcrypt.compare(password, user.password))) {
+    // Accounts created with Google have no password.
+    if (
+      !user ||
+      !user.password ||
+      !(await bcrypt.compare(password, user.password))
+    ) {
       return res.status(401).json({
         message: "Invalid email or password.",
       });
@@ -245,6 +251,91 @@ router.post("/login", async (req, res) => {
     return res.status(500).json({
       message: "Unable to log in.",
     });
+  }
+});
+
+// POST /api/auth/google
+// Signs in OR creates an account from a Google ID token (same endpoint for
+// both the Sign Up and Log In screens).
+const googleClient = new OAuth2Client();
+
+function googleAudiences() {
+  return (process.env.GOOGLE_CLIENT_IDS || "")
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean);
+}
+
+router.post("/google", async (req, res) => {
+  try {
+    const { idToken } = req.body;
+    const audience = googleAudiences();
+
+    if (!audience.length) {
+      return res.status(500).json({
+        message: "Google sign-in is not configured on the server.",
+      });
+    }
+
+    if (typeof idToken !== "string" || !idToken) {
+      return res.status(400).json({ message: "Google sign-in failed." });
+    }
+
+    let payload;
+    try {
+      const ticket = await googleClient.verifyIdToken({ idToken, audience });
+      payload = ticket.getPayload();
+    } catch (verifyError) {
+      return res.status(401).json({
+        message: "Google sign-in could not be verified.",
+      });
+    }
+
+    if (!payload || !payload.email || !payload.email_verified) {
+      return res.status(401).json({
+        message: "Your Google email address is not verified.",
+      });
+    }
+
+    const email = payload.email.trim().toLowerCase();
+    const googleId = payload.sub;
+
+    let user =
+      (await User.findOne({ googleId })) || (await User.findOne({ email }));
+    let isNewUser = false;
+
+    if (!user) {
+      user = await User.create({
+        name: (payload.name || email.split("@")[0]).trim(),
+        email,
+        googleId,
+        authProvider: "google",
+      });
+      isNewUser = true;
+    } else if (!user.googleId) {
+      // Existing email/password account: link Google to it.
+      user.googleId = googleId;
+      await user.save();
+    }
+
+    return res.status(isNewUser ? 201 : 200).json({
+      message: isNewUser
+        ? "Account created with Google."
+        : "Login successful.",
+      token: createToken(user._id),
+      user: publicUser(user),
+      isNewUser,
+    });
+  } catch (error) {
+    if (error.code === 11000) {
+      return res.status(409).json({
+        message: "An account with this email already exists.",
+      });
+    }
+
+    console.error("Google auth error:", error.message);
+
+    return res.status(500).json({ message: "Unable to sign in with Google." });
   }
 });
 
@@ -275,7 +366,14 @@ router.post("/forgot-password", async (req, res) => {
     user.resetOtpExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
     await user.save();
 
-    await sendOtp(normalizedEmail, otp, "reset");
+    try {
+      await sendOtp(normalizedEmail, otp, "reset");
+    } catch (emailError) {
+      user.resetOtpHash = undefined;
+      user.resetOtpExpiresAt = undefined;
+      await user.save();
+      throw emailError;
+    }
 
     return res.json({ message: genericMessage });
   } catch (error) {
