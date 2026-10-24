@@ -541,6 +541,14 @@ const confirm = async (dose, { silent = false } = {}) => {
               ))}
             </View>
 
+            {/* Chat with Saathi */}
+            <PrimaryButton
+              title={t('Talk to Saathi')}
+              color={C.teal}
+              onPress={() => navigation.navigate('Chat')}
+              style={{ marginBottom: 14 }}
+            />
+
             {/* Caregiver dashboard */}
             <PrimaryButton
               title={t('Family / Caregiver Dashboard')}

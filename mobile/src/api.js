@@ -212,6 +212,14 @@ export async function askSaathiAI({
   });
 }
 
+// Free conversation with Saathi. Returns { reply, actions, lang }.
+export async function chatWithSaathi({ messages, language = 'English', profile = {} }) {
+  return request('/api/ai/companion', {
+    method: 'POST',
+    body: JSON.stringify({ messages, language, profile }),
+  });
+}
+
 // Sends ONLY redacted medicine text lines (never an image) to be tidied by AI.
 export async function parsePrescriptionText(lines, language = 'English') {
   return request('/api/ai/prescription-text', {

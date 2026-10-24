@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import LanguageScreen from '../screens/LanguageScreen';
@@ -15,6 +15,7 @@ import PrescriptionScanScreen from '../screens/PrescriptionScanScreen';
 import EmergencyContactsScreen from '../screens/EmergencyContactsScreen';
 import ReviewSetupScreen from '../screens/ReviewSetupScreen';
 import DashboardScreen from '../screens/DashboardScreen';
+import ChatScreen from '../screens/ChatScreen';
 import GlobalVoiceAssistant from '../voice/GlobalVoiceAssistant';
 import VoiceNotifications from '../voice/VoiceNotifications';
 
@@ -22,8 +23,10 @@ const Stack = createNativeStackNavigator();
 export const navigationRef = createNavigationContainerRef();
 
 export default function AppNavigator() {
+  const [routeName, setRouteName] = useState('');
+  const syncRoute = () => setRouteName(navigationRef.getCurrentRoute()?.name || '');
   return (
-    <NavigationContainer ref={navigationRef}>
+    <NavigationContainer ref={navigationRef} onReady={syncRoute} onStateChange={syncRoute}>
       <Stack.Navigator initialRouteName="Language" screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Language" component={LanguageScreen} />
         <Stack.Screen name="Landing" component={LandingScreen} />
@@ -39,10 +42,11 @@ export default function AppNavigator() {
         <Stack.Screen name="Review" component={ReviewSetupScreen} />
         <Stack.Screen name="Dashboard" component={DashboardScreen} options={{ gestureEnabled: false }} />
         <Stack.Screen name="Caregiver" component={CaregiverScreen} />
+        <Stack.Screen name="Chat" component={ChatScreen} />
       </Stack.Navigator>
       {/* Must be mounted inside the NavigationContainer and outside individual screens. */}
       <VoiceNotifications />
-      <GlobalVoiceAssistant navigationRef={navigationRef} />
+      {routeName !== 'Chat' && <GlobalVoiceAssistant navigationRef={navigationRef} />}
     </NavigationContainer>
   );
 }
