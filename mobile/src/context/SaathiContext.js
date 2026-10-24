@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import { Alert, Platform, AppState } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import * as API from '../api';
+import '../utlis/notificationHandler';
 import { syncRoutineReminders, clearRoutineReminders } from '../utlis/routineReminders';
 import { syncMedicineReminders } from '../utlis/medicineReminders';
 const Ctx = createContext(null);
@@ -321,7 +322,11 @@ const googleTr = {
   mr: { 'Sign up with Google':'Google सह नोंदणी करा', 'Log in with Google':'Google सह लॉग इन करा', 'Continue with Google':'Google सह सुरू ठेवा', 'or':'किंवा', 'Google sign-in failed. Please try again.':'Google साइन-इन अयशस्वी. कृपया पुन्हा प्रयत्न करा.' },
   hi: { 'Sign up with Google':'Google से साइन अप करें', 'Log in with Google':'Google से लॉग इन करें', 'Continue with Google':'Google से जारी रखें', 'or':'या', 'Google sign-in failed. Please try again.':'Google साइन-इन विफल रहा। कृपया पुनः प्रयास करें।' },
 };
-export const translate = (key, language) => translations[language]?.[key] || googleTr[language]?.[key] || key;
+const scanTr = {
+  mr: {"Scan prescription": "प्रिस्क्रिप्शन स्कॅन करा", "Take a photo of your prescription. It is read on your phone and the photo is never uploaded.": "तुमच्या प्रिस्क्रिप्शनचा फोटो घ्या. तो फक्त तुमच्या फोनवर वाचला जातो आणि फोटो कधीही अपलोड होत नाही.", "Take photo": "फोटो काढा", "Choose from gallery": "गॅलरीतून निवडा", "Reading prescription...": "प्रिस्क्रिप्शन वाचत आहे...", "Medicine lines found": "सापडलेल्या औषधांच्या ओळी", "Names, phone numbers and addresses are removed. Only these lines can be sent to the AI:": "नावे, फोन नंबर आणि पत्ते काढून टाकले आहेत. फक्त या ओळी AI कडे पाठवल्या जाऊ शकतात:", "Improve with AI": "AI ने अधिक अचूक करा", "Use phone reading only": "फक्त फोनवरील वाचन वापरा", "The photo always stays on your phone.": "फोटो नेहमी तुमच्या फोनवरच राहतो.", "AI could not read it, showing phone reading instead.": "AI ला वाचता आले नाही, म्हणून फोनवरील वाचन दाखवत आहे.", "Check every medicine against your prescription. Saathi can make mistakes.": "प्रत्येक औषध तुमच्या प्रिस्क्रिप्शनशी तपासा. साथी चुकू शकतो.", "Include": "समाविष्ट करा", "Add selected medicines": "निवडलेली औषधे जोडा", "Scan again": "पुन्हा स्कॅन करा", "No medicines found. Try a clearer, well-lit photo.": "औषधे सापडली नाहीत. अधिक स्पष्ट, उजेडातला फोटो घ्या.", "Camera permission is needed to take a photo.": "फोटो काढण्यासाठी कॅमेरा परवानगी आवश्यक आहे.", "Could not read the photo. Please try again.": "फोटो वाचता आला नाही. कृपया पुन्हा प्रयत्न करा.", "Select at least one medicine.": "किमान एक औषध निवडा.", "Name, dosage and time are required for each selected medicine.": "निवडलेल्या प्रत्येक औषधासाठी नाव, डोस आणि वेळ आवश्यक आहे.", "Daily summary": "दैनिक सारांश", "Refresh summary": "सारांश अद्यतनित करा"},
+  hi: {"Scan prescription": "प्रिस्क्रिप्शन स्कैन करें", "Take a photo of your prescription. It is read on your phone and the photo is never uploaded.": "अपने प्रिस्क्रिप्शन की फोटो लें। इसे सिर्फ आपके फोन पर पढ़ा जाता है और फोटो कभी अपलोड नहीं होती।", "Take photo": "फोटो लें", "Choose from gallery": "गैलरी से चुनें", "Reading prescription...": "प्रिस्क्रिप्शन पढ़ रहे हैं...", "Medicine lines found": "मिली दवाओं की पंक्तियाँ", "Names, phone numbers and addresses are removed. Only these lines can be sent to the AI:": "नाम, फ़ोन नंबर और पते हटा दिए गए हैं। सिर्फ़ यही पंक्तियाँ AI को भेजी जा सकती हैं:", "Improve with AI": "AI से बेहतर करें", "Use phone reading only": "सिर्फ़ फ़ोन की रीडिंग इस्तेमाल करें", "The photo always stays on your phone.": "फोटो हमेशा आपके फोन पर ही रहती है।", "AI could not read it, showing phone reading instead.": "AI पढ़ नहीं सका, इसलिए फ़ोन की रीडिंग दिखा रहे हैं।", "Check every medicine against your prescription. Saathi can make mistakes.": "हर दवा को अपने प्रिस्क्रिप्शन से मिलाकर जाँचें। साथी गलती कर सकता है।", "Include": "शामिल करें", "Add selected medicines": "चुनी हुई दवाएँ जोड़ें", "Scan again": "फिर से स्कैन करें", "No medicines found. Try a clearer, well-lit photo.": "कोई दवा नहीं मिली। ज़्यादा साफ़, रोशनी वाली फोटो लें।", "Camera permission is needed to take a photo.": "फोटो लेने के लिए कैमरा अनुमति ज़रूरी है।", "Could not read the photo. Please try again.": "फोटो पढ़ी नहीं जा सकी। कृपया फिर से कोशिश करें।", "Select at least one medicine.": "कम से कम एक दवा चुनें।", "Name, dosage and time are required for each selected medicine.": "चुनी हुई हर दवा के लिए नाम, खुराक और समय ज़रूरी है।", "Daily summary": "दैनिक सारांश", "Refresh summary": "सारांश ताज़ा करें"},
+};
+export const translate = (key, language) => translations[language]?.[key] || googleTr[language]?.[key] || scanTr[language]?.[key] || key;
 export function SaathiProvider({ children }) {
   const [currentUser, setCurrentUserState] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
@@ -338,8 +343,10 @@ export function SaathiProvider({ children }) {
   const [routines, setRoutinesState] = useState([]);
   const [medicines, setMedicinesState] = useState([]);
   const [contacts, setContactsState] = useState(emptyContacts);
+  const [welcomeShown, setWelcomeShown] = useState(false);
   const [done, setDone] = useState({});
   const [taken, setTaken] = useState({});
+  const [dataLoaded, setDataLoaded] = useState(false);
   
   const loadUserData = useCallback(async () => {
     try {
@@ -348,7 +355,8 @@ export function SaathiProvider({ children }) {
       setRoutinesState(Array.isArray(r) ? r : []);
       setMedicinesState(Array.isArray(m) ? m : []);
       setContactsState(c && c.name ? { ...emptyContacts, ...c } : emptyContacts);
-      const date = new Date().toISOString().slice(0, 10);
+      const now = new Date();
+      const date = [now.getFullYear(), String(now.getMonth() + 1).padStart(2, '0'), String(now.getDate()).padStart(2, '0')].join('-');
       const completions = await API.getCompletions(date);
       const routineDone = {}, medicineTaken = {};
       completions.forEach((item) => {
@@ -361,6 +369,7 @@ export function SaathiProvider({ children }) {
       });
       setDone(routineDone); setTaken(medicineTaken);
     } catch (error) { Alert.alert('Saathi', error.message || 'Could not load your saved data.'); }
+    finally { setDataLoaded(true); }
   }, []);
   const setCurrentUser = useCallback((user) => setCurrentUserState(user), []);
   useEffect(() => {
@@ -379,32 +388,38 @@ export function SaathiProvider({ children }) {
   }, []);
   useEffect(() => {
     if (currentUser) loadUserData();
-    else { setProfileState(emptyProfile); setRoutinesState([]); setMedicinesState([]); setContactsState(emptyContacts); setDone({}); setTaken({}); }
+    else { setProfileState(emptyProfile); setRoutinesState([]); setMedicinesState([]); setContactsState(emptyContacts); setDone({}); setTaken({}); setDataLoaded(false); setWelcomeShown(false); }
   }, [currentUser, loadUserData]);
   // Re-schedule "5 minutes before" routine reminders whenever routines change,
   // the profile language changes, or the user logs in / out.
   useEffect(() => {
-    if (!currentUser) { clearRoutineReminders(); return; }
+    if (!currentUser) { clearRoutineReminders(); return undefined; }
     syncRoutineReminders(routines, profile.language, language);
+
+    // Refresh the rolling reminder window whenever the app comes to the foreground.
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') syncRoutineReminders(routines, profile.language, language);
+    });
+    return () => sub.remove();
   }, [currentUser, routines, profile.language, language]);
   useEffect(() => {
   if (!currentUser) {
     return;
   }
 
-  syncMedicineReminders(medicines);
+  syncMedicineReminders(medicines, profile.language, language);
 
   // Refresh the rolling reminder window whenever the app comes to the foreground.
   const sub = AppState.addEventListener('change', (state) => {
-    if (state === 'active') syncMedicineReminders(medicines);
+    if (state === 'active') syncMedicineReminders(medicines, profile.language, language);
   });
   return () => sub.remove();
-}, [currentUser, medicines]);
+}, [currentUser, medicines, profile.language, language]);
   const setProfile = useCallback((next) => setProfileState(prev => typeof next === 'function' ? next(prev) : next), []);
   const setRoutines = useCallback((next) => setRoutinesState(prev => { const value = typeof next === 'function' ? next(prev) : next; API.saveRoutines(value).catch(error => Alert.alert('Save failed', error.message)); return value; }), []);
   const setMedicines = useCallback((next) => setMedicinesState((prev) => { const value = typeof next === 'function' ? next(prev) : next; API.saveMedicines(value, prev).then(saved => { if (Array.isArray(saved)) setMedicinesState(saved); }).catch(error => Alert.alert('Save failed', error.message)); return value; }), []);
   const setContacts = useCallback((next) => setContactsState(prev => typeof next === 'function' ? next(prev) : next), []);
-  return <Ctx.Provider value={{ currentUser, setCurrentUser, authLoading, profile, setProfile, routines, setRoutines, medicines, setMedicines, contacts, setContacts, done, setDone, taken, setTaken, loadUserData, language, setLanguage, languageChosen, t }}>
+  return <Ctx.Provider value={{ currentUser, setCurrentUser, authLoading, profile, setProfile, routines, setRoutines, medicines, setMedicines, contacts, setContacts, welcomeShown, setWelcomeShown, done, setDone, taken, setTaken, loadUserData, dataLoaded, language, setLanguage, languageChosen, t }}>
     {children}
   </Ctx.Provider>;
 }

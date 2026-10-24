@@ -58,8 +58,6 @@ async function authFetch(path, options = {}) {
   return response;
 }
 
-
-
 async function request(path, options = {}) {
   const response = await authFetch(path, options);
   const data = await response.json().catch(() => ({}));
@@ -73,20 +71,16 @@ async function request(path, options = {}) {
   return data;
 }
 
-
-
-
-
- // -------------------- AUTHENTICATION --------------------
+// -------------------- AUTHENTICATION --------------------
 
 export async function signup(nameOrDetails, email, password) {
   const details =
-    typeof nameOrDetails === "object" && nameOrDetails !== null
+    typeof nameOrDetails === 'object' && nameOrDetails !== null
       ? nameOrDetails
       : { name: nameOrDetails, email, password };
 
-  return request("/api/auth/signup", {
-    method: "POST",
+  return request('/api/auth/signup', {
+    method: 'POST',
     body: JSON.stringify({
       name: details.name?.trim(),
       email: details.email?.trim().toLowerCase(),
@@ -96,8 +90,8 @@ export async function signup(nameOrDetails, email, password) {
 }
 
 export async function verifySignup(email, otp) {
-  const data = await request("/api/auth/verify-signup", {
-    method: "POST",
+  const data = await request('/api/auth/verify-signup', {
+    method: 'POST',
     body: JSON.stringify({
       email: email.trim().toLowerCase(),
       otp: String(otp).trim(),
@@ -112,8 +106,8 @@ export async function verifySignup(email, otp) {
 }
 
 export async function login(email, password) {
-  const data = await request("/api/auth/login", {
-    method: "POST",
+  const data = await request('/api/auth/login', {
+    method: 'POST',
     body: JSON.stringify({
       email: email.trim().toLowerCase(),
       password,
@@ -128,8 +122,8 @@ export async function login(email, password) {
 }
 
 export async function googleAuth(idToken) {
-  const data = await request("/api/auth/google", {
-    method: "POST",
+  const data = await request('/api/auth/google', {
+    method: 'POST',
     body: JSON.stringify({ idToken }),
   });
 
@@ -141,8 +135,8 @@ export async function googleAuth(idToken) {
 }
 
 export async function forgotPassword(email) {
-  return request("/api/auth/forgot-password", {
-    method: "POST",
+  return request('/api/auth/forgot-password', {
+    method: 'POST',
     body: JSON.stringify({
       email: email.trim().toLowerCase(),
     }),
@@ -150,8 +144,8 @@ export async function forgotPassword(email) {
 }
 
 export async function resetPassword(email, otp, newPassword) {
-  return request("/api/auth/reset-password", {
-    method: "POST",
+  return request('/api/auth/reset-password', {
+    method: 'POST',
     body: JSON.stringify({
       email: email.trim().toLowerCase(),
       otp: String(otp).trim(),
@@ -160,19 +154,26 @@ export async function resetPassword(email, otp, newPassword) {
   });
 }
 
-
-
-
 // -------------------- PROFILE --------------------
 
+// Get the existing user's profile.
 export async function getProfile() {
   const data = await request('/api/profile');
   return data.profile ?? data;
 }
 
+// Create a profile when the user does not have one yet.
 export async function saveProfile(profile) {
   return request('/api/profile', {
     method: 'POST',
+    body: JSON.stringify(profile),
+  });
+}
+
+// Update an existing profile.
+export async function updateProfile(profile) {
+  return request('/api/profile', {
+    method: 'PUT',
     body: JSON.stringify(profile),
   });
 }
@@ -194,6 +195,31 @@ export async function saveRoutines(routines) {
   });
 }
 
+// -------------------- AI VOICE COMPANION --------------------
+
+export async function askSaathiAI({
+  message,
+  language = 'English',
+  context = {},
+}) {
+  return request('/api/ai/chat', {
+    method: 'POST',
+    body: JSON.stringify({
+      message,
+      language,
+      context,
+    }),
+  });
+}
+
+// Sends ONLY redacted medicine text lines (never an image) to be tidied by AI.
+export async function parsePrescriptionText(lines, language = 'English') {
+  return request('/api/ai/prescription-text', {
+    method: 'POST',
+    body: JSON.stringify({ lines, language }),
+  });
+}
+
 // -------------------- MEDICINES --------------------
 
 export async function getMedicines() {
@@ -202,9 +228,10 @@ export async function getMedicines() {
   return Array.isArray(data) ? data : data.medicines ?? [];
 }
 
-
-
-export async function saveMedicines(medicines, previousMedicines = []) {
+export async function saveMedicines(
+  medicines,
+  previousMedicines = []
+) {
   const previous = Array.isArray(previousMedicines)
     ? previousMedicines
     : [];
@@ -230,9 +257,9 @@ export async function saveMedicines(medicines, previousMedicines = []) {
     if (_id && previousById.has(String(_id))) {
       const oldMedicine = previousById.get(String(_id));
 
-      // Skip unchanged medicines.
       const unchanged = Object.keys(fields).every(
-        (key) => JSON.stringify(fields[key]) ===
+        (key) =>
+          JSON.stringify(fields[key]) ===
           JSON.stringify(oldMedicine[key])
       );
 
@@ -250,7 +277,7 @@ export async function saveMedicines(medicines, previousMedicines = []) {
     }
   }
 
-  // Delete only medicines that were removed from the list.
+  // Delete medicines removed from the list.
   for (const medicine of previous) {
     if (medicine._id && !currentIds.has(String(medicine._id))) {
       await request(`/api/medicines/${medicine._id}`, {
@@ -261,7 +288,6 @@ export async function saveMedicines(medicines, previousMedicines = []) {
 
   return await getMedicines();
 }
-
 
 // -------------------- EMERGENCY CONTACTS --------------------
 
@@ -316,20 +342,38 @@ export async function saveCompletion({
   return data.completion;
 }
 
-
 // -------------------- FAMILY / CAREGIVER DASHBOARD --------------------
+
 export async function createCaregiverInvite() {
-  return request('/api/caregiver/invite', { method: 'POST' });
+  return request('/api/caregiver/invite', {
+    method: 'POST',
+  });
 }
+
 export async function acceptCaregiverInvite(code) {
-  return request('/api/caregiver/accept', { method: 'POST', body: JSON.stringify({ code }) });
+  return request('/api/caregiver/accept', {
+    method: 'POST',
+    body: JSON.stringify({ code }),
+  });
 }
+
 export async function getLinkedElders() {
   return request('/api/caregiver/elders');
 }
+
 export async function getLinkedElderStatus(elderId, date) {
-  const query = date ? `?date=${encodeURIComponent(date)}` : '';
-  return request(`/api/caregiver/elders/${encodeURIComponent(elderId)}/status${query}`);
+  const query = date
+    ? `?date=${encodeURIComponent(date)}`
+    : '';
+
+  return request(
+    `/api/caregiver/elders/${encodeURIComponent(elderId)}/status${query}`
+  );
+}
+
+export async function getElderSummary(elderId, date, time, language = 'English') {
+  const query = `?date=${encodeURIComponent(date)}&time=${encodeURIComponent(time)}&language=${encodeURIComponent(language)}`;
+  return request(`/api/caregiver/elders/${encodeURIComponent(elderId)}/summary${query}`);
 }
 
 export async function getLinkedCaregivers() {

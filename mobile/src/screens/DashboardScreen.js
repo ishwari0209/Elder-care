@@ -1,5 +1,5 @@
 
-  import React, { useState, useEffect } from 'react';
+  import React, { useState, useEffect, useRef } from 'react';
   import {
     View,
     Text,
@@ -14,76 +14,27 @@
 
   import Backdrop from '../components/Backdrop';
   import PrimaryButton from '../components/PrimaryButton';
+  import WelcomeModal from '../components/WelcomeModal';
+  import { buildWelcome } from '../utlis/welcomeGreeting';
   import { useSaathi } from '../context/SaathiContext';
   import { C, card } from '../theme';
   import { logout, saveCompletion } from '../api';
+    import { applyTimeChange } from '../voice/voiceBrain';
+  import {
+    getLocalDate,
+    getScheduledDate,
+    getCompletionWindow,
+    timeToMinutes,
+    todaysRoutines,
+    todaysMedicines,
+    buildDoses,
+  } from '../voice/schedule';
 
   const Empty = ({ text }) => (
     <Text style={{ color: C.grey, fontSize: 16, paddingVertical: 8 }}>
       {text}
     </Text>
   );
-
-  function getLocalDate() {
-    const now = new Date();
-
-    return [
-      now.getFullYear(),
-      String(now.getMonth() + 1).padStart(2, '0'),
-      String(now.getDate()).padStart(2, '0'),
-    ].join('-');
-  }
-
-  // Supports 12:40 PM, 12.40 PM, and 24-hour times such as 13:20.
-  function getScheduledDate(time, now) {
-    const match = String(time || '')
-      .trim()
-      .match(/^(\d{1,2})[:.](\d{2})\s*(AM|PM)?$/i);
-
-    if (!match) return null;
-
-    let hour = Number(match[1]);
-    const minute = Number(match[2]);
-    const period = match[3]?.toUpperCase();
-
-    if (minute > 59) return null;
-
-    if (period) {
-      if (hour < 1 || hour > 12) return null;
-      hour = (hour % 12) + (period === 'PM' ? 12 : 0);
-    } else if (hour > 23) {
-      return null;
-    }
-
-    const scheduled = new Date(now);
-    scheduled.setHours(hour, minute, 0, 0);
-
-    return scheduled;
-  }
-
- 
-function getCompletionWindow(time, now) {
-  const scheduled = getScheduledDate(time, now);
-
-  if (!scheduled) {
-    return {
-      available: true,
-      missed: false,
-      late: false,
-    };
-  }
-
-  const opensAt = scheduled.getTime() - 30 * 60 * 1000;
-  const closesAt = scheduled.getTime() + 30 * 60 * 1000;
-  const current = now.getTime();
-
-  return {
-    available: current >= opensAt && current < closesAt,
-    missed: current >= closesAt,
-    late: current >= closesAt,
-  };
-}
-
 
   export default function DashboardScreen({ navigation }) {
     const {
@@ -97,6 +48,11 @@ function getCompletionWindow(time, now) {
       setDone,
       taken,
       setTaken,
+      setRoutines,
+      setMedicines,
+      dataLoaded,
+      welcomeShown,
+      setWelcomeShown,
       language,
       setLanguage,
       t,
@@ -115,55 +71,10 @@ function getCompletionWindow(time, now) {
 
     const today = currentTime;
 
-    const safeRoutines = Array.isArray(routines) ? routines : [];
-    const todayString = [
-    currentTime.getFullYear(),
-    String(currentTime.getMonth() + 1).padStart(2, '0'),
-    String(currentTime.getDate()).padStart(2, '0'),
-  ].join('-');
-
-  const safeMedicines = (Array.isArray(medicines) ? medicines : [])
-    .filter((medicine) => {
-      const start = medicine.start || '';
-      const end = medicine.end || '';
-
-      const notStarted = start && start > todayString;
-      const dateExpired = end && end < todayString;
-      const statusExpired = medicine.status === 'Expired';
-
-      const todayName = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][currentTime.getDay()];
-      const repeatDays = Array.isArray(medicine.days) && medicine.days.length ? medicine.days : null;
-      const notToday = repeatDays && !repeatDays.includes(todayName);
-
-      return !notStarted && !dateExpired && !statusExpired && !notToday;
-    });
-
-    // Convert "1:19 PM" / "08.00 AM" / "13:20" to minutes since midnight so
-    // times sort chronologically (plain text sorting puts "1:19 PM" before "8:00 AM").
-    const timeToMinutes = (value) => {
-      const d = getScheduledDate(value, new Date(2000, 0, 1));
-      return d ? d.getHours() * 60 + d.getMinutes() : Number.MAX_SAFE_INTEGER;
-    };
-
-    const sorted = [...safeRoutines].sort(
-      (a, b) => timeToMinutes(a.time) - timeToMinutes(b.time)
-    );
-
-    const doses = safeMedicines
-      .flatMap((medicine) =>
-        String(medicine.times || '')
-          .split(',')
-          .map((time) => time.trim())
-          .filter(Boolean)
-          .map((time) => ({
-            key: `${medicine._id}|${medicine.name}|${time}`,
-            itemId: medicine._id,
-            name: medicine.name,
-            dosage: medicine.dosage,
-            time,
-          }))
-      )
-      .sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time));
+    const todayString = getLocalDate(currentTime);
+    const safeMedicines = todaysMedicines(medicines, currentTime);
+    const sorted = todaysRoutines(routines, currentTime);
+    const doses = buildDoses(safeMedicines);
 
     const doneCount = sorted.filter(
       (routine) => Boolean(done[routine._id])
@@ -199,22 +110,22 @@ function getCompletionWindow(time, now) {
       });
     };
 
-    const toggleRoutine = async (routine) => {
+    const toggleRoutine = async (routine, { silent = false, forceDone = false } = {}) => {
       if (!routine._id) {
-        Alert.alert(
+        if (!silent) Alert.alert(
           t('Unable to save'),
           t('This routine has no database ID. Please reload your routines.')
         );
-        return;
+        return false;
       }
 
      
 
       const itemKey = `routine-${routine._id}`;
 
-      if (savingItems[itemKey]) return;
+      if (savingItems[itemKey]) return false;
 
-      const nextDone = !done[routine._id];
+      const nextDone = forceDone ? true : !done[routine._id];
 
       try {
         setSavingItems((previous) => ({
@@ -235,11 +146,13 @@ function getCompletionWindow(time, now) {
           ...previous,
           [routine._id]: nextDone,
         }));
+        return true;
       } catch (error) {
-        Alert.alert(
+        if (!silent) Alert.alert(
           t('Could not save routine'),
           t(error.message || 'Please try again.')
         );
+        return false;
       } finally {
         setSavingItems((previous) => ({
           ...previous,
@@ -247,30 +160,30 @@ function getCompletionWindow(time, now) {
         }));
       }
     };
-const confirm = async (dose) => {
+const confirm = async (dose, { silent = false } = {}) => {
   const now = new Date();
   const scheduled = getScheduledDate(dose.time, now);
 
   // Never allow confirmation before the scheduled time.
   if (scheduled && now.getTime() < scheduled.getTime()) {
-    Alert.alert(
+    if (!silent) Alert.alert(
       t('Too early'),
       `You can confirm this medicine at ${dose.time}.`
     );
-    return;
+    return false;
   }
 
   if (!dose.itemId) {
-    Alert.alert(
+    if (!silent) Alert.alert(
       t('Unable to confirm'),
       t('This medicine has no database ID. Please reload your medicines.')
     );
-    return;
+    return false;
   }
 
   const itemKey = `medicine-${dose.key}`;
 
-  if (savingItems[itemKey]) return;
+  if (savingItems[itemKey]) return false;
 
   try {
     setSavingItems((previous) => ({
@@ -295,15 +208,17 @@ const confirm = async (dose) => {
       }),
     }));
 
-    Alert.alert(
+    if (!silent) Alert.alert(
       t('Saathi'),
       t('Your medicine confirmation was saved.')
     );
+    return true;
   } catch (error) {
-    Alert.alert(
+    if (!silent) Alert.alert(
       t('Could not save confirmation'),
       t(error.message || 'Please try again.')
     );
+    return false;
   } finally {
     setSavingItems((previous) => ({
       ...previous,
@@ -311,6 +226,36 @@ const confirm = async (dose) => {
     }));
   }
 };
+
+    // ---- voice assistant hooks ----
+    const voiceEnvRef = useRef({});
+    voiceEnvRef.current = {
+      name: currentUser?.name || profile?.name || '',
+      routines,
+      medicines,
+      done,
+      taken,
+    };
+
+    // Runs what the person asked for by voice. Returns true when it worked.
+    const runVoiceAction = async (action) => {
+      if (action.type === 'markRoutine') {
+        return toggleRoutine(action.routine, { silent: true, forceDone: true });
+      }
+      if (action.type === 'markDose') {
+        return confirm(action.dose, { silent: true });
+      }
+      if (action.type === 'changeTime') {
+        // Saving also re-schedules the notifications (the context re-syncs them).
+        if (action.item.kind === 'routine') {
+          setRoutines((previous) => applyTimeChange(previous, action));
+        } else {
+          setMedicines((previous) => applyTimeChange(previous, action));
+        }
+        return true;
+      }
+      return false;
+    };
 
     const handleLogout = async () => {
       try {
@@ -402,7 +347,25 @@ const confirm = async (dose) => {
     return (
       <Backdrop>
         <SafeAreaView style={{ flex: 1 }}>
-          <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 40 }}>
+          <WelcomeModal
+            visible={Boolean(currentUser) && dataLoaded && !welcomeShown}
+            onClose={() => setWelcomeShown(true)}
+            data={
+              dataLoaded && !welcomeShown
+                ? buildWelcome({
+                    name: profile?.name || currentUser?.name,
+                    routines,
+                    medicines,
+                    done,
+                    taken,
+                    profileLanguage: profile?.language,
+                    appLanguage: language,
+                    now: currentTime,
+                  })
+                : null
+            }
+          />
+          <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 120 }}>
             {/* Language selector */}
             <View
               style={{
@@ -883,6 +846,7 @@ const isSaving = Boolean(savingItems[itemKey]);
 })}
             </View>
           </ScrollView>
+
         </SafeAreaView>
       </Backdrop>
     );

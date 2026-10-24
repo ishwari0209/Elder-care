@@ -12,7 +12,7 @@ const contactRoutes = require("./routes/contactRoutes");
 const completionRoutes = require("./routes/completionRoutes");
 const careStatusRoutes = require("./routes/careStatusRoutes");
 const caregiverRoutes = require("./routes/caregiverRoutes");
-
+const aiRoutes = require('./routes/aiRoutes');
 const Medicine = require("./models/Medicine");
 
 const app = express();
@@ -87,7 +87,10 @@ app.use("/api/contacts", contactRoutes);
 app.use("/api/completions", completionRoutes);
 app.use("/api/care-status", careStatusRoutes);
 app.use("/api/caregiver", caregiverRoutes);
+console.log('aiRoutes type:', typeof aiRoutes);
+console.log('aiRoutes value:', aiRoutes);
 
+app.use('/api/ai', aiRoutes);
 async function startServer() {
   try {
     if (!process.env.JWT_SECRET) {

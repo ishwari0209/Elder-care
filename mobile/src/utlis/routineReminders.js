@@ -1,43 +1,40 @@
-
 import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
+import './notificationHandler';
+import { ensureReminderChannel } from './reminderChannels';
+import { NAME_TO_CODE } from '../soundConfig';
+
+// Notifies 5 minutes BEFORE each saved routine, in the profile language.
+// Uses one-off DATE triggers for the next few days (the same approach as the
+// medicine reminders). The window is rebuilt on every app open/resume and
+// whenever routines change.
 
 const LEAD_MINUTES = 5;
-const CHANNEL_ID = 'routine-reminders';
+const DAYS_AHEAD = 7;
 const FLAG = 'saathiRoutineReminder';
+// iOS keeps only 64 pending notifications in total (medicines share them).
+const MAX_PENDING = Platform.OS === 'ios' ? 25 : 300;
 
-const WEEKDAY = {
-  Sun: 1,
-  Mon: 2,
-  Tue: 3,
-  Wed: 4,
-  Thu: 5,
-  Fri: 6,
-  Sat: 7,
-};
-
+const lateNotified = new Set(); // heads-ups already given this session
+const JS_DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const ALL_DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 const MESSAGES = {
   English: {
     title: 'Saathi reminder',
-    body: (name, time) => `${name} is coming up in 5 minutes (${time}).`,
+    body: (name, time, m = 5) => `${name} is coming up in ${m} ${m === 1 ? 'minute' : 'minutes'} (${time}).`,
   },
   Hindi: {
     title: 'साथी रिमाइंडर',
-    body: (name, time) => `${name} का समय 5 मिनट में है (${time}).`,
+    body: (name, time, m = 5) => `${name} का समय ${m} मिनट में है (${time}).`,
   },
   Marathi: {
     title: 'साथी आठवण',
-    body: (name, time) => `${name} ची वेळ 5 मिनिटांत आहे (${time}).`,
+    body: (name, time, m = 5) => `${name} ची वेळ ${m} मिनिटांत आहे (${time}).`,
   },
 };
 
-const CODE_TO_NAME = {
-  en: 'English',
-  hi: 'Hindi',
-  mr: 'Marathi',
-};
+const CODE_TO_NAME = { en: 'English', hi: 'Hindi', mr: 'Marathi' };
 
 function resolveLanguage(profileLanguage, appLanguage) {
   if (MESSAGES[profileLanguage]) return profileLanguage;
@@ -45,178 +42,141 @@ function resolveLanguage(profileLanguage, appLanguage) {
 }
 
 function parseTime(value) {
-  const match = String(value || '')
-    .trim()
-   .match(/^(\d{1,2})[:.](\d{2})\s*(AM|PM)?$/i);
-
-  if (!match) {
-    console.warn('Invalid routine time:', value);
-    return null;
-  }
+  const match = String(value || '').trim().match(/^(\d{1,2})[:.](\d{2})\s*(AM|PM)?$/i);
+  if (!match) return null;
 
   let hour = Number(match[1]);
   const minute = Number(match[2]);
   const period = match[3]?.toUpperCase();
 
   if (minute > 59) return null;
-
   if (period) {
     if (hour < 1 || hour > 12) return null;
     hour = (hour % 12) + (period === 'PM' ? 12 : 0);
   } else if (hour > 23) {
     return null;
   }
-
   return { hour, minute };
 }
 
-function shiftBack({ hour, minute }, weekday) {
-  let total = hour * 60 + minute - LEAD_MINUTES;
-  let day = weekday;
+// Every future reminder moment (routine time minus 5 min) in the next DAYS_AHEAD days.
+export function planRoutineReminders(routines, now = new Date()) {
+  const todayMidnight = new Date(now);
+  todayMidnight.setHours(0, 0, 0, 0);
+  const plan = [];
 
-  if (total < 0) {
-    total += 24 * 60;
-    day = weekday === 1 ? 7 : weekday - 1;
+  for (const routine of Array.isArray(routines) ? routines : []) {
+    const parsed = parseTime(routine?.time);
+    if (!parsed || !routine?.name) continue;
+
+    const days = Array.isArray(routine.days) && routine.days.length ? routine.days : ALL_DAYS;
+
+    for (let offset = 0; offset < DAYS_AHEAD; offset++) {
+      const day = new Date(todayMidnight);
+      day.setDate(todayMidnight.getDate() + offset);
+      if (!days.includes(JS_DAY_NAMES[day.getDay()])) continue;
+
+      const routineAt = new Date(day);
+      routineAt.setHours(parsed.hour, parsed.minute, 0, 0);
+      const remindAt = new Date(routineAt.getTime() - LEAD_MINUTES * 60 * 1000);
+
+      if (remindAt <= now) {
+        // The 5-minute mark has passed but the routine itself is still ahead (for example
+        // it was just saved): give ONE heads-up right now instead of staying silent.
+        const msLeft = routineAt.getTime() - now.getTime();
+        const key = `${routine._id || routine.name}|${routineAt.toDateString()}|${routine.time}`;
+        if (offset === 0 && msLeft >= 60 * 1000 && !lateNotified.has(key)) {
+          plan.push({ routine, remindAt: new Date(now.getTime() + 4000), minutes: Math.max(1, Math.round(msLeft / 60000)), lateKey: key });
+        }
+        continue;
+      }
+      plan.push({ routine, remindAt, minutes: LEAD_MINUTES });
+    }
   }
 
-  return {
-    hour: Math.floor(total / 60),
-    minute: total % 60,
-    weekday: day,
-  };
+  return plan.sort((a, b) => a.remindAt - b.remindAt).slice(0, MAX_PENDING);
 }
 
 async function cancelExisting() {
-  const scheduled =
-    await Notifications.getAllScheduledNotificationsAsync();
-
+  const scheduled = await Notifications.getAllScheduledNotificationsAsync();
   for (const item of scheduled) {
-    if (item.content?.data?.[FLAG]) {
-      await Notifications.cancelScheduledNotificationAsync(
-        item.identifier
-      );
+    if (item.content?.data?.[FLAG] && !item.content?.data?.test) {
+      await Notifications.cancelScheduledNotificationAsync(item.identifier);
     }
   }
 }
 
 async function ensurePermission() {
   const current = await Notifications.getPermissionsAsync();
-
   if (current.granted) return true;
   if (current.canAskAgain === false) return false;
-
   const asked = await Notifications.requestPermissionsAsync();
-  return asked.granted;
+  return !!asked.granted;
 }
 
 async function run(routines, profileLanguage, appLanguage) {
   if (Platform.OS === 'web') return;
 
-  if (!Array.isArray(routines) || routines.length === 0) {
-    await cancelExisting();
-    return;
-  }
+  await cancelExisting(); // start clean so edits, deletes and language changes apply
+  if (!Array.isArray(routines) || !routines.length) return;
 
   if (!(await ensurePermission())) {
-    console.warn('Notification permission not granted.');
+    console.warn('Notification permission not granted - routine reminders are off.');
     return;
   }
 
-  await cancelExisting();
+  const languageName = resolveLanguage(profileLanguage, appLanguage);
+  const message = MESSAGES[languageName];
+  const channel = await ensureReminderChannel('routine', NAME_TO_CODE[languageName]);
+  const plan = planRoutineReminders(routines);
+  let scheduledCount = 0;
 
-  if (Platform.OS === 'android') {
-    await Notifications.setNotificationChannelAsync(CHANNEL_ID, {
-      name: 'Routine reminders',
-      importance: Notifications.AndroidImportance.MAX,
-      
-    });
-  }
-
-  const message =
-    MESSAGES[resolveLanguage(profileLanguage, appLanguage)];
-
-  for (const routine of routines) {
-    const parsed = parseTime(routine.time);
-
-    if (!parsed || !routine.name) continue;
-
-    const days =
-      Array.isArray(routine.days) && routine.days.length
-        ? routine.days
-        : ALL_DAYS;
-
-    for (const day of days) {
-      const baseWeekday = WEEKDAY[day];
-      if (!baseWeekday) continue;
-
-      const { hour, minute, weekday } = shiftBack(
-        parsed,
-        baseWeekday
-      );
-
-      try {
-        const id = await Notifications.scheduleNotificationAsync({
+  for (const { routine, remindAt, minutes, lateKey } of plan) {
+    try {
+      await Notifications.scheduleNotificationAsync({
         content: {
-  title: message.title,
-  body: message.body(routine.name, routine.time),
-  data: {
-    [FLAG]: true,
-    routineId: String(routine._id || ''),
-  },
-},
-          trigger: {
-            type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
-            weekday,
-            hour,
-            minute,
-            ...(Platform.OS === 'android'
-              ? { channelId: CHANNEL_ID }
-              : {}),
+          title: message.title,
+          body: message.body(routine.name, routine.time, minutes),
+          sound: channel.iosSound,
+          data: {
+            [FLAG]: true,
+            routineId: String(routine._id || ''),
+            name: routine.name,
+            time: routine.time,
+            minutes,
           },
-        });
-
-        console.log('Routine reminder scheduled:', {
-  id,
-  name: routine.name,
-  originalTime: routine.time,
-  reminderTime: `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`,
-  weekday,
-});
-      } catch (error) {
-        console.warn(
-          'Could not schedule routine:',
-          routine.name,
-          error
-        );
-      }
+        },
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.DATE,
+          date: remindAt,
+          ...(channel.channelId ? { channelId: channel.channelId } : {}),
+        },
+      });
+      if (lateKey) lateNotified.add(lateKey);
+      scheduledCount += 1;
+    } catch (error) {
+      console.warn('Could not schedule routine reminder:', routine.name, error);
     }
   }
 
-  const scheduled =
-    await Notifications.getAllScheduledNotificationsAsync();
-
+  const first = plan[0];
   console.log(
-    'Saathi scheduled notification count:',
-    scheduled.filter((item) => item.content?.data?.[FLAG]).length
+    `Routine reminders scheduled: ${scheduledCount}` +
+      (first ? ` (next: "${first.routine.name}" at ${first.remindAt.toLocaleString()})` : ' (none in the next days)')
   );
 }
 
+// Calls are queued so quick successive saves never overlap.
 let queue = Promise.resolve();
 
-export function syncRoutineReminders(
-  routines,
-  profileLanguage,
-  appLanguage
-) {
+export function syncRoutineReminders(routines, profileLanguage, appLanguage) {
   queue = queue
     .then(() => run(routines, profileLanguage, appLanguage))
-    .catch((error) => {
-      console.warn('Routine reminder scheduling failed:', error);
-    });
-
+    .catch((error) => console.warn('Routine reminder scheduling failed:', error));
   return queue;
 }
 
+// Used on logout.
 export function clearRoutineReminders() {
   return syncRoutineReminders([], '', '');
 }

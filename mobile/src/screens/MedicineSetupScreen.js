@@ -2,6 +2,7 @@
 import React from 'react';
 import Screen from '../components/Screen';
 import ListEditor from '../components/ListEditor';
+import PrimaryButton from '../components/PrimaryButton';
 import { useSaathi, ALL_DAYS } from '../context/SaathiContext';
 
 const fields = [
@@ -25,7 +26,7 @@ const fields = [
 ];
 
 export default function MedicineSetupScreen({ navigation, route }) {
-  const { medicines, setMedicines } = useSaathi();
+  const { medicines, setMedicines, t } = useSaathi();
   const edit = route.params?.edit;
 
   return (
@@ -37,6 +38,12 @@ export default function MedicineSetupScreen({ navigation, route }) {
       onNext={edit ? undefined : () => navigation.navigate('Contacts')}
       nextLabel={edit ? undefined : 'Continue'}
     >
+      <PrimaryButton
+        title={t('Scan prescription')}
+        outline
+        onPress={() => navigation.navigate('PrescriptionScan')}
+      />
+
       <ListEditor
         fields={fields}
         items={medicines}

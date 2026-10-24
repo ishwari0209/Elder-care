@@ -13,16 +13,34 @@ function localDate() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
+function localTime() {
+  const d = new Date();
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+const LANGUAGE_NAME = { en: 'English', hi: 'Hindi', mr: 'Marathi' };
+
 export default function CaregiverScreen({ navigation }) {
-  const { t } = useSaathi();
+  const { t, language } = useSaathi();
   const [code, setCode] = useState('');
   const [invite, setInvite] = useState('');
   const [elders, setElders] = useState([]);
   const [selected, setSelected] = useState(null);
   const [caregivers, setCaregivers] = useState([]);
   const [status, setStatus] = useState(null);
+  const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // The summary is a bonus: if it fails, the normal care details still load.
+  const fetchSummary = async (elderId) => {
+    try {
+      const result = await API.getElderSummary(elderId, localDate(), localTime(), LANGUAGE_NAME[language] || 'English');
+      return result.summary || null;
+    } catch (e) {
+      return null;
+    }
+  };
 
   const loadElders = useCallback(async () => {
     try {
@@ -35,16 +53,18 @@ setCaregivers(caregiverResult.caregivers || []);
         const linked = (result.elders || []).find((e) => e.elderId === selected.elderId);
         if (linked) {
           setStatus(await API.getLinkedElderStatus(linked.elderId, localDate()));
+          setSummary(await fetchSummary(linked.elderId));
           setSelected(linked);
         } else {
           setSelected(null);
           setStatus(null);
+          setSummary(null);
         }
       }
     } catch (e) {
       setError(t(e.message || 'Could not load caregiver data.'));
     }
-  }, [selected?.elderId]);
+  }, [selected?.elderId, language]);
 
   useFocusEffect(useCallback(() => { loadElders(); }, [loadElders]));
 
@@ -71,6 +91,7 @@ setCaregivers(caregiverResult.caregivers || []);
     const care = await API.getLinkedElderStatus(elder.elderId, localDate());
     setSelected(elder);
     setStatus(care);
+    setSummary(await fetchSummary(elder.elderId));
   });
 
   const completionMap = new Map((status?.completions || []).map((item) => [
@@ -246,6 +267,62 @@ setCaregivers(caregiverResult.caregivers || []);
         )}
       </View>
 
+      {selected && summary && (
+        <View
+          style={[
+            card,
+            {
+              borderWidth: 1.5,
+              borderColor:
+                summary.level === 'attention' ? C.red : summary.level === 'good' ? C.green : C.line,
+            },
+          ]}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Ionicons
+              name={
+                summary.level === 'attention'
+                  ? 'alert-circle'
+                  : summary.level === 'good'
+                  ? 'checkmark-circle'
+                  : 'information-circle'
+              }
+              size={30}
+              color={summary.level === 'attention' ? C.red : summary.level === 'good' ? C.green : C.grey}
+            />
+            <View style={{ flex: 1, marginLeft: 10 }}>
+              <Text style={{ color: C.grey, fontSize: 13, fontWeight: '700' }}>
+                {t('Daily summary')} {'\u2022'} {summary.date}
+              </Text>
+              <Text style={{ color: C.navy, fontSize: 19, fontWeight: '900', marginTop: 2 }}>
+                {summary.headline}
+              </Text>
+            </View>
+          </View>
+
+          {summary.lines.map((line, index) => (
+            <Text
+              key={index}
+              style={{
+                color: index === summary.lines.length - 1 ? C.grey : C.text,
+                fontSize: index === summary.lines.length - 1 ? 12 : 16,
+                lineHeight: 22,
+                marginTop: 8,
+              }}
+            >
+              {line}
+            </Text>
+          ))}
+
+          <PrimaryButton
+            title={t('Refresh summary')}
+            outline
+            onPress={() => run(async () => { setSummary(await fetchSummary(selected.elderId)); })}
+            style={{ marginTop: 12 }}
+          />
+        </View>
+      )}
+
       {selected && status && <View style={card}>
         <Text style={{ color: C.navy, fontSize: 22, fontWeight: '900' }}>{selected.name} · {t('daily care')}</Text>
         <Text style={{ color: C.grey, marginTop: 4 }}>{t('Date:')} {status.date}</Text>
@@ -281,7 +358,7 @@ setCaregivers(caregiverResult.caregivers || []);
           {!!status.emergencyContacts.doctor && <Text style={{ color: C.text, marginTop: 8 }}>{t('Doctor:')} {status.emergencyContacts.doctor} {status.emergencyContacts.doctorPhone}</Text>}
         </View> : <Text style={{ color: C.grey, marginTop: 6 }}>{t('No emergency contacts saved.')}</Text>}
         <Text style={{ color: C.grey, fontSize: 12, lineHeight: 17, marginTop: 14 }}>{t(status.notice || '')}</Text>
-        <PrimaryButton title={t("Close care details")} color={C.navy} onPress={() => { setSelected(null); setStatus(null); }} style={{ marginTop: 14 }} />
+        <PrimaryButton title={t("Close care details")} color={C.navy} onPress={() => { setSelected(null); setStatus(null); setSummary(null); }} style={{ marginTop: 14 }} />
       </View>}
     </Screen>
   );

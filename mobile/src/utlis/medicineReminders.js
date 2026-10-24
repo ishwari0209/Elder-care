@@ -1,11 +1,31 @@
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
+import './notificationHandler';
+import { ensureReminderChannel } from './reminderChannels';
+import { NAME_TO_CODE } from '../soundConfig';
 
 const FLAG = 'saathiMedicineReminder';
-const CHANNEL_ID = 'medicine-reminders';
 const DAYS_AHEAD = 30;
 // iOS keeps only 64 pending local notifications; Android allows far more.
-const MAX_PENDING = Platform.OS === 'ios' ? 60 : 400;
+const MAX_PENDING = Platform.OS === 'ios' ? 35 : 400;
+
+const MESSAGES = {
+  English: {
+    title: 'Saathi medicine reminder',
+    body: (name, dosage) => `It is time for ${name}${dosage ? ` — ${dosage}` : ''}. Please follow your prescribed instructions.`,
+  },
+  Hindi: {
+    title: 'साथी दवा रिमाइंडर',
+    body: (name, dosage) => `${name} लेने का समय हो गया है${dosage ? ` — ${dosage}` : ''}। कृपया डॉक्टर के बताए अनुसार लीजिए।`,
+  },
+  Marathi: {
+    title: 'साथी औषध आठवण',
+    body: (name, dosage) => `${name} घेण्याची वेळ झाली आहे${dosage ? ` — ${dosage}` : ''}. कृपया डॉक्टरांनी सांगितल्याप्रमाणे घ्या.`,
+  },
+};
+const CODE_TO_NAME = { en: 'English', hi: 'Hindi', mr: 'Marathi' };
+const resolveLanguage = (profileLanguage, appLanguage) =>
+  MESSAGES[profileLanguage] ? profileLanguage : CODE_TO_NAME[appLanguage] || 'English';
 
 const JS_DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const ALL_DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -55,7 +75,7 @@ export async function testMedicineNotification() {
 async function cancelExistingMedicineReminders() {
   const scheduled = await Notifications.getAllScheduledNotificationsAsync();
   for (const item of scheduled) {
-    if (item.content?.data?.[FLAG]) {
+    if (item.content?.data?.[FLAG] && !item.content?.data?.test) {
       await Notifications.cancelScheduledNotificationAsync(item.identifier);
     }
   }
@@ -64,12 +84,12 @@ async function cancelExistingMedicineReminders() {
 // Schedules a one-off notification for every real calendar date that is
 //   (a) between the medicine's start and end date, AND
 //   (b) one of the weekdays the person ticked.
-export async function syncMedicineReminders(medicines = []) {
+export async function syncMedicineReminders(medicines = [], profileLanguage, appLanguage) {
   if (Platform.OS === 'web') return;
 
   // If a sync is running, remember the latest request and run it afterwards.
   if (syncing) {
-    queued = medicines;
+    queued = [medicines, profileLanguage, appLanguage];
     return;
   }
   syncing = true;
@@ -81,19 +101,15 @@ export async function syncMedicineReminders(medicines = []) {
       if (!requested.granted) return;
     }
 
-    if (Platform.OS === 'android') {
-      await Notifications.setNotificationChannelAsync(CHANNEL_ID, {
-        name: 'Medicine reminders',
-        importance: Notifications.AndroidImportance.MAX,
-      });
-    }
-
     await cancelExistingMedicineReminders();
 
     const now = new Date();
     const todayMidnight = new Date(now);
     todayMidnight.setHours(0, 0, 0, 0);
     const pending = [];
+    const languageName = resolveLanguage(profileLanguage, appLanguage);
+    const text = MESSAGES[languageName];
+    const channel = await ensureReminderChannel('medicine', NAME_TO_CODE[languageName]);
 
     for (const medicine of medicines || []) {
       if (!medicine?.name || !medicine?.times) continue;
@@ -138,19 +154,21 @@ export async function syncMedicineReminders(medicines = []) {
       try {
         await Notifications.scheduleNotificationAsync({
           content: {
-            title: 'Saathi medicine reminder',
-            body: `Time for ${medicine.name} — ${medicine.dosage || ''}. Follow your prescribed instructions.`,
-            sound: true,
+            title: text.title,
+            body: text.body(medicine.name, medicine.dosage),
+            sound: channel.iosSound,
             data: {
               [FLAG]: true,
               medicineId: String(medicine._id || ''),
+              name: medicine.name,
+              dosage: medicine.dosage || '',
               time,
             },
           },
           trigger: {
             type: Notifications.SchedulableTriggerInputTypes.DATE,
             date: trigger,
-            ...(Platform.OS === 'android' ? { channelId: CHANNEL_ID } : {}),
+            ...(channel.channelId ? { channelId: channel.channelId } : {}),
           },
         });
       } catch (error) {
@@ -164,7 +182,7 @@ export async function syncMedicineReminders(medicines = []) {
     if (queued) {
       const next = queued;
       queued = null;
-      syncMedicineReminders(next);
+      syncMedicineReminders(...next);
     }
   }
 }

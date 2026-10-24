@@ -8,7 +8,8 @@ import { saveContacts } from '../api';
 import { Alert } from 'react-native';
 export default function EmergencyContactsScreen({ navigation, route }) {
   const { contacts, setContacts } = useSaathi(); const [err, setErr] = useState({}); const edit = route.params?.edit;
-  const set = k => v => setContacts({ ...contacts, [k]: v });
+const set = k => v =>
+  setContacts(prev => ({ ...prev, [k]: v }));
   const next = async () => {
     const x = {};
     if (!contacts.name.trim()) x.name = 'Primary contact name is required';

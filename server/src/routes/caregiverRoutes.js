@@ -18,6 +18,7 @@ const Routine = require('../models/Routine');
 const Medicine = require('../models/Medicine');
 const EmergencyContacts = require('../models/EmergencyContacts');
 const Completion = require('../models/Completion');
+const { buildDailySummary } = require('../services/dailySummary');
 
 const router = express.Router();
 
@@ -247,6 +248,70 @@ router.get(
     });
   })
 );
+// Daily summary for a linked caregiver (counts + short note in the caregiver's language).
+// Query: date=YYYY-MM-DD, time=HH:MM (caregiver's local time, 24h), language=English|Hindi|Marathi
+router.get(
+  '/elders/:elderId/summary',
+  asyncHandler(async (req, res) => {
+    const { elderId } = req.params;
+
+    if (!mongoose.isValidObjectId(elderId)) {
+      return res.status(400).json({ message: 'Invalid elder account.' });
+    }
+
+    const link = await CareLink.findOne({
+      elderUserId: elderId,
+      caregiverUserId: req.user.id,
+      status: 'accepted',
+    });
+
+    if (!link) {
+      return res.status(403).json({
+        message: 'You are not authorized to view this care information.',
+      });
+    }
+
+    const date = String(req.query.date || '');
+    const dateOk =
+      /^\d{4}-\d{2}-\d{2}$/.test(date) &&
+      !Number.isNaN(new Date(`${date}T12:00:00`).getTime());
+    const timeMatch = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(String(req.query.time || ''));
+
+    if (!dateOk || !timeMatch) {
+      return res.status(400).json({ message: 'A valid date (YYYY-MM-DD) and time (HH:MM) are required.' });
+    }
+
+    const language = ['English', 'Hindi', 'Marathi'].includes(req.query.language)
+      ? req.query.language
+      : 'English';
+
+    const [profile, routines, medicines, completions] = await Promise.all([
+      Profile.findOne({ userId: elderId }).select('name'),
+      Routine.find({ userId: elderId }),
+      Medicine.find({ userId: elderId }),
+      Completion.find({ userId: elderId, date }),
+    ]);
+
+    const user = profile ? null : await User.findById(elderId).select('name');
+
+    const summary = buildDailySummary({
+      elderName: profile?.name || user?.name,
+      routines,
+      medicines,
+      completions,
+      date,
+      nowMinutes: Number(timeMatch[1]) * 60 + Number(timeMatch[2]),
+      language,
+    });
+
+    res.json({
+      summary,
+      notice:
+        'Completion records are user-reported and kept for 24 hours. SOS calls are not recorded.',
+    });
+  })
+);
+
 // List caregivers linked to the logged-in elderly user.
 
 router.get(
