@@ -8,7 +8,7 @@ import {
 
 import Screen from "../components/Screen";
 import FormField from "../components/FormField";
-import GoogleButton from "../components/GoogleButton";
+
 import PasswordField from "../components/PasswordField";
 import { C } from "../theme";
 import { useSaathi } from "../context/SaathiContext";
@@ -117,19 +117,7 @@ export default function SignupScreen({ navigation }) {
         }
       }}
       onNext={submit}
-      footer={
-        step === "details" ? (
-          <GoogleButton
-            label="Sign up with Google"
-            disabled={loading}
-            onError={setError}
-            onSuccess={(user) => {
-        setCurrentUser(user);
-        navigation.reset({ index: 0, routes: [{ name: "Dashboard" }] });
-      }}
-          />
-        ) : null
-      }
+      
       nextLabel={
         loading
           ? t("Please wait...")

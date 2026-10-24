@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { Text, TouchableOpacity, ActivityIndicator } from "react-native";
 import Screen from "../components/Screen";
-import GoogleButton from "../components/GoogleButton";
+
 import FormField from "../components/FormField";
 import PasswordField from "../components/PasswordField";
 import { C } from "../theme";
@@ -48,17 +48,7 @@ export default function LoginScreen({ navigation }) {
       subtitle={t("Sign in to open your Saathi dashboard.")}
       onBack={() => navigation.navigate("Landing")}
       onNext={submit}
-      footer={
-        <GoogleButton
-          label="Log in with Google"
-          disabled={loading}
-          onError={setError}
-          onSuccess={(user) => {
-        setCurrentUser(user);
-        navigation.reset({ index: 0, routes: [{ name: "Dashboard" }] });
-      }}
-        />
-      }
+     
       nextLabel={loading ? t("Logging in...") : t("Log In")}
     >
       {loading && (

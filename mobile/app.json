@@ -1,4 +1,3 @@
-
 {
   "expo": {
     "name": "saathi-mobile",
@@ -7,29 +6,10 @@
     "plugins": [
       "expo-secure-store",
       "@react-native-community/datetimepicker",
-      [
-        "expo-notifications",
-        {
-          "sounds": [
-            "./assets/sounds/routine_en.wav",
-            "./assets/sounds/routine_hi.wav",
-            "./assets/sounds/routine_mr.wav",
-            "./assets/sounds/medicine_en.wav",
-            "./assets/sounds/medicine_hi.wav",
-            "./assets/sounds/medicine_mr.wav"
-          ]
-        }
-      ],
+      "expo-notifications",
       "expo-speech-recognition",
       "expo-video",
-      "expo-web-browser",
-      "@react-native-google-signin/google-signin",
-      [
-        "expo-image-picker",
-        {
-          "cameraPermission": "Saathi uses the camera to read your prescription on your phone. The photo is never uploaded."
-        }
-      ]
+      "expo-web-browser"
     ],
     "android": {
       "package": "com.anonymous.saathimobile",
