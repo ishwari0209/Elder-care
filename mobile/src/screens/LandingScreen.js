@@ -12,6 +12,7 @@ import FeatureCard from '../components/FeatureCard';
 import { C, card } from '../theme';
 import { useSaathi } from '../context/SaathiContext';
 
+import LanguagePicker from '../components/LanguagePicker';
 const F = [
   ['medkit', 'Medicine reminders', 'Keep track of scheduled medicines'],
   ['calendar', 'Daily routines', 'Meals, walks and appointments'],
@@ -27,7 +28,25 @@ const S = [
   'Confirm completed activities in your dashboard',
   'Review daily progress at a glance',
 ];
+export async function testMedicineNotification() {
+  const permission = await Notifications.requestPermissionsAsync();
 
+  console.log('Notification permission:', permission);
+
+  const id = await Notifications.scheduleNotificationAsync({
+    content: {
+      title: 'Saathi Test',
+      body: 'Medicine notifications are working!',
+      data: { test: true },
+    },
+    trigger: {
+      type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+      seconds: 10,
+    },
+  });
+
+  console.log('Test notification scheduled:', id);
+}
 export default function LandingScreen({ navigation }) {
   const { t, language, setLanguage } = useSaathi();
 
@@ -66,23 +85,7 @@ export default function LandingScreen({ navigation }) {
             </TouchableOpacity>
 
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              {['en', 'mr', 'hi'].map((code) => (
-                <TouchableOpacity
-                  key={code}
-                  onPress={() => setLanguage(code)}
-                  style={{ paddingHorizontal: 5, paddingVertical: 8 }}
-                >
-                  <Text
-                    style={{
-                      color: language === code ? C.navy : C.grey,
-                      fontWeight: language === code ? '900' : '600',
-                      fontSize: 12,
-                    }}
-                  >
-                    {code === 'en' ? 'EN' : code === 'mr' ? 'मराठी' : 'हिंदी'}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+              <LanguagePicker />
 
               <TouchableOpacity
                 onPress={() => navigation.navigate('Login')}

@@ -2,30 +2,28 @@ import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import './notificationHandler';
 import { ensureReminderChannel } from './reminderChannels';
-import { NAME_TO_CODE } from '../soundConfig';
+import { translateOne, languageCode, soundCode } from '../i18n/aiTranslator';
 
 const FLAG = 'saathiMedicineReminder';
 const DAYS_AHEAD = 30;
 // iOS keeps only 64 pending local notifications; Android allows far more.
 const MAX_PENDING = Platform.OS === 'ios' ? 35 : 400;
 
-const MESSAGES = {
-  English: {
-    title: 'Saathi medicine reminder',
-    body: (name, dosage) => `It is time for ${name}${dosage ? ` — ${dosage}` : ''}. Please follow your prescribed instructions.`,
-  },
-  Hindi: {
-    title: 'साथी दवा रिमाइंडर',
-    body: (name, dosage) => `${name} लेने का समय हो गया है${dosage ? ` — ${dosage}` : ''}। कृपया डॉक्टर के बताए अनुसार लीजिए।`,
-  },
-  Marathi: {
-    title: 'साथी औषध आठवण',
-    body: (name, dosage) => `${name} घेण्याची वेळ झाली आहे${dosage ? ` — ${dosage}` : ''}. कृपया डॉक्टरांनी सांगितल्याप्रमाणे घ्या.`,
-  },
-};
-const CODE_TO_NAME = { en: 'English', hi: 'Hindi', mr: 'Marathi' };
+const TITLE = 'Saathi medicine reminder';
+const BODY = 'It is time for {name}{dosage}. Please follow your prescribed instructions.';
+
+// AI-translated, cached per language. Falls back to English automatically.
+async function buildMessage(code) {
+  const title = await translateOne(TITLE, code);
+  const template = await translateOne(BODY, code);
+  const tpl = ['{name}', '{dosage}'].every((p) => template.includes(p)) ? template : BODY;
+  return {
+    title,
+    body: (name, dosage) => tpl.replace('{name}', name).replace('{dosage}', dosage ? `  ${dosage}` : ''),
+  };
+}
 const resolveLanguage = (profileLanguage, appLanguage) =>
-  MESSAGES[profileLanguage] ? profileLanguage : CODE_TO_NAME[appLanguage] || 'English';
+  languageCode(profileLanguage && profileLanguage !== 'undefined' ? profileLanguage : appLanguage);
 
 const JS_DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const ALL_DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -107,9 +105,9 @@ export async function syncMedicineReminders(medicines = [], profileLanguage, app
     const todayMidnight = new Date(now);
     todayMidnight.setHours(0, 0, 0, 0);
     const pending = [];
-    const languageName = resolveLanguage(profileLanguage, appLanguage);
-    const text = MESSAGES[languageName];
-    const channel = await ensureReminderChannel('medicine', NAME_TO_CODE[languageName]);
+    const code = resolveLanguage(profileLanguage, appLanguage);
+    const text = await buildMessage(code);
+    const channel = await ensureReminderChannel('medicine', soundCode(code));
 
     for (const medicine of medicines || []) {
       if (!medicine?.name || !medicine?.times) continue;
