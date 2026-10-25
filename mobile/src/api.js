@@ -4,10 +4,7 @@ import * as SecureStore from 'expo-secure-store';
 
 // -------------------- API CONFIGURATION --------------------
 
-const API_BASE_URL =
-  Platform.OS === 'web'
-    ? 'http://localhost:5000'
-    : 'http://172.18.79.106:5000';
+const API_BASE_URL = 'https://saathi-backend-9nhr.onrender.com';
 
 const TOKEN_KEY = 'saathi_token';
 
@@ -20,7 +17,6 @@ export async function getAuthToken() {
 
   return SecureStore.getItemAsync(TOKEN_KEY);
 }
-
 async function saveAuthToken(token) {
   if (!token) return;
 
