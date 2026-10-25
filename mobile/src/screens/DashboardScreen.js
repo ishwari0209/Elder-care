@@ -428,7 +428,16 @@ const confirm = async (dose, { silent = false } = {}) => {
                     marginBottom: 14,
                   }}
                 >
-                  {today.toDateString()}
+                  {today.toLocaleDateString(
+  language === 'mr' ? 'mr-IN' :
+  language === 'hi' ? 'hi-IN' : 'en-IN',
+  {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  }
+)}
                 </Text>
               </View>
 

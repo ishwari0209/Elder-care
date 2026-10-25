@@ -27,25 +27,7 @@ const S = [
   'Confirm completed activities in your dashboard',
   'Review daily progress at a glance',
 ];
-export async function testMedicineNotification() {
-  const permission = await Notifications.requestPermissionsAsync();
 
-  console.log('Notification permission:', permission);
-
-  const id = await Notifications.scheduleNotificationAsync({
-    content: {
-      title: 'Saathi Test',
-      body: 'Medicine notifications are working!',
-      data: { test: true },
-    },
-    trigger: {
-      type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
-      seconds: 10,
-    },
-  });
-
-  console.log('Test notification scheduled:', id);
-}
 export default function LandingScreen({ navigation }) {
   const { t, language, setLanguage } = useSaathi();
 

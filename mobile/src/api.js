@@ -4,7 +4,7 @@ import * as SecureStore from 'expo-secure-store';
 
 // -------------------- API CONFIGURATION --------------------
 
-const API_BASE_URL = 'https://saathi-backend-9nhr.onrender.com';
+const API_BASE_URL = ' https://saathi-backend-9nhr.onrender.com';
 
 const TOKEN_KEY = 'saathi_token';
 
