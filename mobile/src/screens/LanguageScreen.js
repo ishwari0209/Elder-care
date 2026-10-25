@@ -1,13 +1,15 @@
 import Backdrop from '../components/Backdrop';
 import React, { useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSaathi } from '../context/SaathiContext';
 import { C } from '../theme';
 
-import { SUPPORTED_LANGUAGES } from '../i18n/aiTranslator';
-
-const choices = SUPPORTED_LANGUAGES.map((l) => ({ id: l.code, title: l.native, subtitle: l.name }));
+const choices = [
+  { id: 'en', title: 'English', subtitle: 'Continue in English' },
+  { id: 'mr', title: 'मराठी', subtitle: 'मराठीत पुढे जा' },
+  { id: 'hi', title: 'हिन्दी', subtitle: 'हिन्दी में आगे बढ़ें' },
+];
 
 export default function LanguageScreen({ navigation }) {
   const { language, setLanguage, languageChosen, t } = useSaathi();
@@ -16,10 +18,10 @@ export default function LanguageScreen({ navigation }) {
     await setLanguage(id);
   };
   return (
-    <Backdrop><SafeAreaView style={{ flex: 1, padding: 22 }}><ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}>
+    <Backdrop><SafeAreaView style={{ flex: 1, justifyContent: 'center', padding: 22 }}>
       <Text style={{ fontSize: 30, fontWeight: '900', color: C.navy, marginBottom: 8 }}>Saathi</Text>
       <Text style={{ fontSize: 24, fontWeight: '800', color: C.navy, marginBottom: 8 }}>{t('Choose your language')}</Text>
-      <Text style={{ color: C.grey, fontSize: 16, marginBottom: 22 }}>{t('Choose a language for the app. You can change it later.')}</Text>
+      <Text style={{ color: C.grey, fontSize: 16, marginBottom: 22 }}>Choose a language for the app. You can change it later.</Text>
       {choices.map((item) => (
         <TouchableOpacity key={item.id} onPress={() => choose(item.id)} accessibilityRole="button"
           style={{ padding: 18, backgroundColor: '#fff', borderRadius: 16, marginBottom: 12, borderWidth: language === item.id ? 2 : 1, borderColor: language === item.id ? C.teal : C.line }}>
@@ -27,6 +29,6 @@ export default function LanguageScreen({ navigation }) {
           <Text style={{ fontSize: 15, color: C.grey, marginTop: 4 }}>{item.subtitle}</Text>
         </TouchableOpacity>
       ))}
-    </ScrollView></SafeAreaView></Backdrop>
+    </SafeAreaView></Backdrop>
   );
 }

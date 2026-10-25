@@ -12,7 +12,6 @@ import FeatureCard from '../components/FeatureCard';
 import { C, card } from '../theme';
 import { useSaathi } from '../context/SaathiContext';
 
-import LanguagePicker from '../components/LanguagePicker';
 const F = [
   ['medkit', 'Medicine reminders', 'Keep track of scheduled medicines'],
   ['calendar', 'Daily routines', 'Meals, walks and appointments'],
@@ -85,7 +84,23 @@ export default function LandingScreen({ navigation }) {
             </TouchableOpacity>
 
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <LanguagePicker />
+              {['en', 'mr', 'hi'].map((code) => (
+                <TouchableOpacity
+                  key={code}
+                  onPress={() => setLanguage(code)}
+                  style={{ paddingHorizontal: 5, paddingVertical: 8 }}
+                >
+                  <Text
+                    style={{
+                      color: language === code ? C.navy : C.grey,
+                      fontWeight: language === code ? '900' : '600',
+                      fontSize: 12,
+                    }}
+                  >
+                    {code === 'en' ? 'EN' : code === 'mr' ? 'मराठी' : 'हिंदी'}
+                  </Text>
+                </TouchableOpacity>
+              ))}
 
               <TouchableOpacity
                 onPress={() => navigation.navigate('Login')}

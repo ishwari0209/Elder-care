@@ -17,7 +17,6 @@
   import WelcomeModal from '../components/WelcomeModal';
   import { buildWelcome } from '../utlis/welcomeGreeting';
   import { useSaathi } from '../context/SaathiContext';
-  import LanguagePicker from '../components/LanguagePicker';
   import { C, card } from '../theme';
   import { logout, saveCompletion } from '../api';
     import { applyTimeChange } from '../voice/voiceBrain';
@@ -380,7 +379,26 @@ const confirm = async (dose, { silent = false } = {}) => {
                 {t('Language')}:
               </Text>
 
-              <LanguagePicker />
+              {['en', 'mr', 'hi'].map((code) => (
+                <TouchableOpacity
+                  key={code}
+                  onPress={() => setLanguage(code)}
+                  style={{
+                    padding: 8,
+                    borderRadius: 8,
+                    backgroundColor:
+                      language === code ? C.mint : 'transparent',
+                  }}
+                >
+                  <Text style={{ color: C.navy, fontWeight: '800' }}>
+                    {code === 'en'
+                      ? 'EN'
+                      : code === 'mr'
+                        ? 'मराठी'
+                        : 'हिंदी'}
+                  </Text>
+                </TouchableOpacity>
+              ))}
             </View>
 
             {/* Greeting */}
@@ -410,7 +428,16 @@ const confirm = async (dose, { silent = false } = {}) => {
                     marginBottom: 14,
                   }}
                 >
-                  {today.toDateString()}
+                  {today.toLocaleDateString(
+  language === 'mr' ? 'mr-IN' :
+  language === 'hi' ? 'hi-IN' : 'en-IN',
+  {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  }
+)}
                 </Text>
               </View>
 

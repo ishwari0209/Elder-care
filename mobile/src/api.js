@@ -216,14 +216,6 @@ export async function chatWithSaathi({ messages, language = 'English', profile =
   });
 }
 
-// Translates short UI strings with AI. Returns { translations: [...] } in the same order.
-export async function translateTexts(texts, language) {
-  return request('/api/ai/translate', {
-    method: 'POST',
-    body: JSON.stringify({ texts, language }),
-  });
-}
-
 // Sends ONLY redacted medicine text lines (never an image) to be tidied by AI.
 export async function parsePrescriptionText(lines, language = 'English') {
   return request('/api/ai/prescription-text', {

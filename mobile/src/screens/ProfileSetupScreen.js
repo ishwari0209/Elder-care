@@ -25,7 +25,7 @@ export default function ProfileSetupScreen({ navigation, route }) {
     <Screen step={edit ? '' : 'Step 1 of 5'} title="Your Profile" subtitle="Tell us a little about you." onBack={() => navigation.goBack()} onNext={next} nextLabel={edit ? 'Save' : 'Continue'}>
       <FormField label="Full name" required value={profile.name} onChange={set('name')} error={err.name} />
       <FormField label="Age or date of birth" value={profile.age} onChange={set('age')} placeholder="e.g. 68" />
-      <FormField label="Preferred language" type="chips" options={['English','Hindi','Marathi','Bengali','Tamil','Telugu','Gujarati','Kannada','Malayalam','Punjabi']} value={profile.language} onChange={set('language')} />
+      <FormField label="Preferred language" type="chips" options={['Marathi','Hindi','English']} value={profile.language} onChange={set('language')} />
       <FormField label="Primary phone number" required value={profile.phone} onChange={set('phone')} error={err.phone} keyboardType="phone-pad" />
       <FormField label="Address / location (optional)" value={profile.address} onChange={set('address')} />
       <FormField label="Medical conditions (optional)" type="multiline" value={profile.conditions} onChange={set('conditions')} />

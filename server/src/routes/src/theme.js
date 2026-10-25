@@ -1,2 +1,0 @@
-export const C = { navy:'#0F2E5C', teal:'#1B8A8F', bg:'#EEF3F9', card:'#FFFFFF', red:'#D93025', text:'#1D2B3A', grey:'#6B7A8C', line:'#D5DEE9', green:'#2E9E5B', mint:'#E3F1F2' };
-export const card = { backgroundColor:'rgba(255,255,255,0.86)', borderRadius:22, padding:16, marginBottom:14, borderWidth:1, borderColor:'rgba(255,255,255,0.9)', shadowColor:'#0F2E5C', shadowOpacity:0.12, shadowRadius:16, shadowOffset:{width:0,height:6}, elevation:4 };

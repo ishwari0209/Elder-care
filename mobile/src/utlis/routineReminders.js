@@ -2,7 +2,7 @@ import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import './notificationHandler';
 import { ensureReminderChannel } from './reminderChannels';
-import { translateOne, languageCode, soundCode } from '../i18n/aiTranslator';
+import { NAME_TO_CODE } from '../soundConfig';
 
 // Notifies 5 minutes BEFORE each saved routine, in the profile language.
 // Uses one-off DATE triggers for the next few days (the same approach as the
@@ -19,27 +19,26 @@ const lateNotified = new Set(); // heads-ups already given this session
 const JS_DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const ALL_DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-const TITLE = 'Saathi reminder';
-const BODY = '{name} is coming up in {minutes} {unit} ({time}).';
+const MESSAGES = {
+  English: {
+    title: 'Saathi reminder',
+    body: (name, time, m = 5) => `${name} is coming up in ${m} ${m === 1 ? 'minute' : 'minutes'} (${time}).`,
+  },
+  Hindi: {
+    title: 'साथी रिमाइंडर',
+    body: (name, time, m = 5) => `${name} का समय ${m} मिनट में है (${time}).`,
+  },
+  Marathi: {
+    title: 'साथी आठवण',
+    body: (name, time, m = 5) => `${name} ची वेळ ${m} मिनिटांत आहे (${time}).`,
+  },
+};
 
-// AI-translated, cached per language. Falls back to English automatically.
-async function buildMessage(code) {
-  const title = await translateOne(TITLE, code);
-  const minuteWord = await translateOne('minutes', code);
-  const minuteWord1 = await translateOne('minute', code);
-  const template = await translateOne(BODY, code);
-  const ok = ['{name}', '{minutes}', '{unit}', '{time}'].every((p) => template.includes(p));
-  const tpl = ok ? template : BODY;
-  return {
-    title,
-    body: (name, time, m = 5) =>
-      tpl.replace('{name}', name).replace('{minutes}', String(m))
-        .replace('{unit}', m === 1 ? minuteWord1 : minuteWord).replace('{time}', time),
-  };
-}
+const CODE_TO_NAME = { en: 'English', hi: 'Hindi', mr: 'Marathi' };
 
 function resolveLanguage(profileLanguage, appLanguage) {
-  return languageCode(profileLanguage && profileLanguage !== 'undefined' ? profileLanguage : appLanguage);
+  if (MESSAGES[profileLanguage]) return profileLanguage;
+  return CODE_TO_NAME[appLanguage] || 'English';
 }
 
 function parseTime(value) {
@@ -126,9 +125,9 @@ async function run(routines, profileLanguage, appLanguage) {
     return;
   }
 
-  const code = resolveLanguage(profileLanguage, appLanguage);
-  const message = await buildMessage(code);
-  const channel = await ensureReminderChannel('routine', soundCode(code));
+  const languageName = resolveLanguage(profileLanguage, appLanguage);
+  const message = MESSAGES[languageName];
+  const channel = await ensureReminderChannel('routine', NAME_TO_CODE[languageName]);
   const plan = planRoutineReminders(routines);
   let scheduledCount = 0;
 
